@@ -272,6 +272,8 @@ int main(int argc, char **argv) {
                 break;
             case 'v':
                 logLevel = optarg;
+                // Convert to uppercase for log4cpp compatibility
+                std::transform(logLevel.begin(), logLevel.end(), logLevel.begin(), ::toupper);
                 break;
             case 'h':
             default:
