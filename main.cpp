@@ -206,7 +206,7 @@ static void writeData(ImageInput* pImageInput) {
 static void usage(const char* progname) {
     std::cout << "Program to read and recognize the counter of an electricity meter with OpenCV.\n";
     std::cout << "Version: " << VERSION << std::endl;
-    std::cout << "Usage: " << progname << " [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>\n";
+    std::cout << "Usage: " << progname << " [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>] [-H]\n";
     std::cout << "\nImage input:\n";
     std::cout << "  -i <image directory> : read image files (png) from directory.\n";
     std::cout << "  -c <camera number> : read images from camera.\n";
@@ -219,6 +219,7 @@ static void usage(const char* progname) {
     std::cout << "\nOptions:\n";
     std::cout << "  -s <n> : Sleep n milliseconds after processing of each image (default=1000).\n";
     std::cout << "  -v <l> : Log level. One of DEBUG, INFO, ERROR (default).\n";
+    std::cout << "  -H : Enable HDR mode for Pi camera (better contrast and dynamic range).\n";
 }
 
 static void configureLogging(const std::string & priority = "INFO", bool toConsole = false) {
@@ -244,16 +245,20 @@ int main(int argc, char **argv) {
     std::string logLevel = "ERROR";
     char cmd = 0;
     int cmdCount = 0;
+    bool useHdri = false;
+    int cameraDevice = -1;
+    std::string inputDir;
 
-    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:h")) != -1) {
-        switch (opt) {
+    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:hH")) != -1) {
+    switch (opt) {
             case 'i':
-                pImageInput = new DirectoryInput(Directory(optarg, ".png"));
-                inputCount++;
+                inputDir = optarg;
                 break;
             case 'c':
-                pImageInput = new CameraInput(atoi(optarg));
-                inputCount++;
+                cameraDevice = atoi(optarg);
+                break;
+            case 'H':
+                useHdri = true;
                 break;
             case 'l':
             case 't':
@@ -282,6 +287,17 @@ int main(int argc, char **argv) {
                 break;
         }
     }
+    
+    // Create input objects with all options known
+    if (!inputDir.empty()) {
+        pImageInput = new DirectoryInput(Directory(inputDir.c_str(), ".png"));
+        inputCount++;
+    }
+    if (cameraDevice >= 0) {
+        pImageInput = new CameraInput(cameraDevice, useHdri);
+        inputCount++;
+    }
+    
     if (inputCount != 1) {
         std::cerr << "*** You should specify exactly one camera or input directory!\n\n";
         usage(argv[0]);

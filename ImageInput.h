@@ -46,13 +46,15 @@ private:
 
 class CameraInput: public ImageInput {
 public:
-    CameraInput(int device);
+    CameraInput(int device, bool useHdri = false);
+    void setHdri(bool enable) { _useHdri = enable; }
 
     virtual bool nextImage();
 
 private:
     cv::VideoCapture _capture; // Nur noch Pi-Kamera, USB-Kamera entfällt
     bool _useRpicam = false;   // Flag ob rpicam-still verwendet wird
+    bool _useHdri = false;     // Enable HDR mode for rpicam
     bool _testMode = false;    // Test-Modus für Entwicklung
     cv::Mat _testImage;        // Statisches Testbild
 };

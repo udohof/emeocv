@@ -83,7 +83,8 @@ bool DirectoryInput::nextImage() {
     return true;
 }
 
-CameraInput::CameraInput(int device) {
+CameraInput::CameraInput(int device, bool useHdri) {
+    _useHdri = useHdri;
     // Raspberry Pi Kamera-Erfassung über rpicam (moderne libcamera)
     bool opened = false;
     
@@ -179,27 +180,65 @@ bool CameraInput::nextImage() {
         success = true;
         log4cpp::Category::getRoot() << log4cpp::Priority::INFO << "Test-Bild verwendet: " << success;
     } else if (_useRpicam) {
-        // rpicam-still für Einzelaufnahmen mit optimiertem Autofokus für OCR
+        // rpicam-still für Einzelaufnahmen mit HDR-Option
         std::string filename = "/tmp/current_frame.jpg";
-        std::string cmd = "rpicam-still -o " + filename + 
-                         " --width 640 --height 480" +
+        std::string cmd = "rpicam-still -o " + filename +
                          " --timeout 1 --nopreview" +
-                         " --autofocus-mode auto" +         // Kontinuierlicher Autofokus
-                         " --autofocus-range normal" +      // Normaler Fokusbereich  
-                         " --autofocus-speed fast" +        // Schneller Fokus
-                         " --lens-position 0.0" +          // Auto-Position
-                         " --sharpness 1.5" +              // Erhöhte Schärfe für OCR
-                         " --contrast 1.2" +               // Leicht erhöhter Kontrast
-                         " --quality 95" +                 // Hohe Bildqualität
-                         " > /dev/null 2>&1";
+                         " --autofocus-mode auto" +
+                         " --autofocus-range normal" +
+                         " --autofocus-speed fast" +
+                         " --lens-position 0.0" +
+                         " --sharpness 1.5" +
+                         " --contrast 1.2" +
+                         " --quality 95";
         
+        if (_useHdri) {
+            // HDR-Modus: Verwende native Auflösung und skaliere danach
+            cmd += " --hdr auto";
+            // Keine explizite Auflösung im HDR-Modus setzen, um Verzerrungen zu vermeiden
+            log4cpp::Category::getRoot() << log4cpp::Priority::INFO << "HDR mode enabled - using native resolution";
+        } else {
+            // Normale Aufnahme: Explizite Auflösung setzen
+            cmd += " --width 640 --height 480";
+        }
+        
+        cmd += " > /dev/null 2>&1";
+        
+        log4cpp::Category::getRoot() << log4cpp::Priority::DEBUG << "rpicam command: " << cmd;
         int result = system(cmd.c_str());
         if (result == 0) {
-            _img = cv::imread(filename);
-            success = !_img.empty();
+            cv::Mat originalImg = cv::imread(filename);
+            if (!originalImg.empty()) {
+                log4cpp::Category::getRoot() << log4cpp::Priority::INFO 
+                    << "Original Bildgröße (" << (_useHdri ? "HDR" : "Normal") << "): " 
+                    << originalImg.cols << "x" << originalImg.rows 
+                    << " (Megapixel: " << (originalImg.cols * originalImg.rows / 1000000.0) << ")";
+                
+                if (_useHdri) {
+                    // HDR-Bild: Skaliere direkt auf 640x480 (fülle gesamte Fläche aus)
+                    cv::resize(originalImg, _img, cv::Size(640, 480));
+                    
+                    log4cpp::Category::getRoot() << log4cpp::Priority::INFO 
+                        << "HDR-Bild (höhere native Auflösung) herunterskaliert von " 
+                        << originalImg.cols << "x" << originalImg.rows 
+                        << " auf 640x480 - QUALITÄTSVORTEIL durch Supersampling!";
+                } else {
+                    // Normale Aufnahme: Direkt verwenden oder einfach skalieren
+                    if (originalImg.cols != 640 || originalImg.rows != 480) {
+                        cv::resize(originalImg, _img, cv::Size(640, 480));
+                        log4cpp::Category::getRoot() << log4cpp::Priority::INFO 
+                            << "Normal-Bild skaliert auf 640x480";
+                    } else {
+                        _img = originalImg;
+                    }
+                }
+                success = true;
+            }
             // Temporäre Datei löschen
             system(("rm -f " + filename).c_str());
-            log4cpp::Category::getRoot() << log4cpp::Priority::INFO << "rpicam-still Bild erfasst: " << success;
+            log4cpp::Category::getRoot() << log4cpp::Priority::INFO 
+                << "rpicam-still Bild erfasst: " << success 
+                << " (Finale Größe: " << _img.cols << "x" << _img.rows << ")";
         } else {
             log4cpp::Category::getRoot() << log4cpp::Priority::WARN << "rpicam-still fehlgeschlagen";
         }
