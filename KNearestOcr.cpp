@@ -16,6 +16,7 @@
 #include <exception>
 
 #include "KNearestOcr.h"
+#include "DebugOutput.h"
 
 KNearestOcr::KNearestOcr(const Config & config) :
 #if CV_MAJOR_VERSION == 2
@@ -121,6 +122,16 @@ char KNearestOcr::recognize(const cv::Mat& img) {
             cres = '0' + (int) result;
         } else if (rlog.isInfoEnabled()) {
             rlog << log4cpp::Priority::INFO << "OCR rejected: " << (int) result;
+        }
+        
+        // Debug: Save OCR input with recognition result
+        if (_config.getTestMode()) {
+            std::map<std::string, std::string> params;
+            params["recognized_digit"] = std::string(1, cres);
+            params["result"] = std::to_string((int) result);
+            params["distance"] = std::to_string(dists.at<float>(0, 0));
+            params["max_dist"] = std::to_string(_config.getOcrMaxDist());
+            DebugOutput::saveDebugImage(img, "KNearestOcr_recognize", params);
         }
         rlog << log4cpp::Priority::DEBUG << "results: " << results;
         rlog << log4cpp::Priority::DEBUG << "neighborResponses: " << neighborResponses;

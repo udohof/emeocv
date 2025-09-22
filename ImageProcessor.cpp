@@ -14,6 +14,7 @@
 
 #include "ImageProcessor.h"
 #include "Config.h"
+#include "DebugOutput.h"
 
 /**
  * Functor to help sorting rectangles by their x-position.
@@ -82,6 +83,12 @@ void ImageProcessor::process() {
     cvtColor(_img, _imgGray, cv::COLOR_BGR2GRAY);
 #endif
 
+    // Debug: Original image after grayscale conversion
+    if (_config.getTestMode()) {
+        std::map<std::string, std::string> params;
+        DebugOutput::saveDebugImage(_imgGray, "ImageProcessor_grayscale", params);
+    }
+
     // initial rotation to get the digits up
     rotate(_config.getRotationDegrees());
 
@@ -108,6 +115,13 @@ void ImageProcessor::rotate(double rotationDegrees) {
     if (_debugWindow) {
         cv::warpAffine(_img, img_rotated, M, _img.size());
         _img = img_rotated;
+    }
+    
+    // Debug: Save rotated image
+    if (_config.getTestMode()) {
+        std::map<std::string, std::string> params;
+        params["degrees"] = std::to_string(rotationDegrees);
+        DebugOutput::saveDebugImage(_imgGray, "ImageProcessor_rotate", params);
     }
 }
 
@@ -186,6 +200,15 @@ cv::Mat ImageProcessor::cannyEdges() {
     cv::Mat edges;
     // detect edges
     cv::Canny(_imgGray, edges, _config.getCannyThreshold1(), _config.getCannyThreshold2());
+    
+    // Debug: Save canny edges
+    if (_config.getTestMode()) {
+        std::map<std::string, std::string> params;
+        params["threshold1"] = std::to_string(_config.getCannyThreshold1());
+        params["threshold2"] = std::to_string(_config.getCannyThreshold2());
+        DebugOutput::saveDebugImage(edges, "ImageProcessor_cannyEdges", params);
+    }
+    
     return edges;
 }
 
@@ -278,6 +301,17 @@ void ImageProcessor::findCounterDigits() {
         _digits.push_back(img_ret(roi));
         if (_debugDigits) {
             cv::rectangle(_img, roi, cv::Scalar(0, 255, 0), 2);
+        }
+        
+        // Debug: Save individual digit
+        if (_config.getTestMode()) {
+            std::map<std::string, std::string> params;
+            params["digit_index"] = std::to_string(i);
+            params["x"] = std::to_string(roi.x);
+            params["y"] = std::to_string(roi.y);
+            params["width"] = std::to_string(roi.width);
+            params["height"] = std::to_string(roi.height);
+            DebugOutput::saveDebugImage(img_ret(roi), "ImageProcessor_digit", params);
         }
     }
 }
