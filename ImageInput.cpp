@@ -83,16 +83,16 @@ bool DirectoryInput::nextImage() {
     return true;
 }
 
-CameraInput::CameraInput(int device, bool useHdri) {
-    _useHdri = useHdri;
+CameraInput::CameraInput(int device, bool useHdri) : _useHdri(useHdri), _useRpicam(true), _testMode(false) {
     // Raspberry Pi Kamera-Erfassung über rpicam (moderne libcamera)
     bool opened = false;
     
-    log4cpp::Category::getRoot() << log4cpp::Priority::INFO << "Versuche Pi-Kamera zu öffnen...";
+    log4cpp::Category::getRoot() << log4cpp::Priority::INFO 
+        << "Pi-Kamera initialisiert (device: " << device 
+        << ", HDR: " << (_useHdri ? "ein" : "aus") << ")";
     
     // Da OpenCV mit der modernen Pi-Kamera Probleme hat,
     // verwenden wir rpicam-still für einzelne Aufnahmen
-    _useRpicam = true;
     
     // Test ob rpicam funktioniert
     std::string testCmd = "rpicam-still -o /tmp/pi_camera_test.jpg" +
@@ -267,6 +267,27 @@ bool CameraInput::nextImage() {
     }
 
     return success;
+}
+
+void CameraInput::setHdri(bool enable) {
+    _useHdri = enable;
+    log4cpp::Category::getRoot() << log4cpp::Priority::INFO 
+        << "HDR-Modus " << (_useHdri ? "aktiviert" : "deaktiviert");
+}
+
+void CameraInput::setTestMode(bool enable) {
+    _testMode = enable;
+    if (_testMode && _testImage.empty()) {
+        // Lade ein Testbild falls verfügbar
+        _testImage = cv::imread("test_image.jpg");
+        if (_testImage.empty()) {
+            log4cpp::Category::getRoot() << log4cpp::Priority::WARN 
+                << "Kein Testbild gefunden, Test-Modus deaktiviert";
+            _testMode = false;
+        }
+    }
+    log4cpp::Category::getRoot() << log4cpp::Priority::INFO 
+        << "Test-Modus " << (_testMode ? "aktiviert" : "deaktiviert");
 }
 
 

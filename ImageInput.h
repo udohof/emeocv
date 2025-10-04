@@ -47,7 +47,8 @@ private:
 class CameraInput: public ImageInput {
 public:
     CameraInput(int device, bool useHdri = false);
-    void setHdri(bool enable) { _useHdri = enable; }
+    void setHdri(bool enable);
+    void setTestMode(bool enable);
 
     virtual bool nextImage();
 
