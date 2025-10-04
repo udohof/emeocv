@@ -12,3 +12,5 @@ Debug/config.yml
 Debug/DebugOutput.o
 Debug/ImageProcessor.o
 Debug/KNearestOcr.o
+Debug/emeocv
+Debug/main.o
