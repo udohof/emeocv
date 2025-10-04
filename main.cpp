@@ -213,6 +213,7 @@ static void usage(const char* progname) {
     std::cout << "  -v <l> : Log level. One of DEBUG, INFO, ERROR (default).\n";
     std::cout << "  -H : Enable HDR mode for Pi camera (better contrast and dynamic range).\n";
     std::cout << "  -d : Enable debug/test mode - saves intermediate processing steps as images.\n";
+    std::cout << "  -H : Enable HDR mode for better contrast and higher resolution (Pi Camera only).\n";
 }
 
 static void configureLogging(const std::string & priority = "INFO", bool toConsole = false) {
@@ -242,6 +243,7 @@ int main(int argc, char **argv) {
     int cameraDevice = -1;
     std::string inputDir;
     bool testMode = false;
+    bool useHdri = false;
 
     while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:hH:hd")) != -1) {
     switch (opt) {
@@ -274,6 +276,9 @@ int main(int argc, char **argv) {
                 break;
             case 'd':
                 testMode = true;
+                break;
+            case 'H':
+                // HDR bereits im ersten Durchlauf verarbeitet
                 break;
             case 'h':
             default:
