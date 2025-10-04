@@ -9,3 +9,6 @@ Debug/KNearestOcr.o
 Debug/ImageInput.o
 Debug/emeocv
 Debug/config.yml
+Debug/DebugOutput.o
+Debug/ImageProcessor.o
+Debug/KNearestOcr.o
