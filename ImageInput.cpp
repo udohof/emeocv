@@ -187,7 +187,6 @@ bool CameraInput::nextImage() {
                          " --autofocus-mode auto" +
                          " --autofocus-range normal" +
                          " --autofocus-speed fast" +
-                         " --lens-position 0.0" +
                          " --sharpness 1.5" +
                          " --contrast 1.2" +
                          " --quality 95";

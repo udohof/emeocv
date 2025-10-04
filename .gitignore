@@ -14,3 +14,5 @@ Debug/ImageProcessor.o
 Debug/KNearestOcr.o
 Debug/emeocv
 Debug/main.o
+Debug/ImageInput.o
+Debug/emeocv
