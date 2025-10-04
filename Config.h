@@ -14,6 +14,9 @@ public:
     void saveConfig();
     void loadConfig();
 
+    bool getTestMode() const { return _testMode; }
+    void setTestMode(bool mode) { _testMode = mode; }
+
     int getDigitMaxHeight() const {
         return _digitMaxHeight;
     }
@@ -55,6 +58,7 @@ private:
     int _cannyThreshold1;
     int _cannyThreshold2;
     std::string _trainingDataFilename;
+    bool _testMode = false;
 };
 
 #endif /* CONFIG_H_ */

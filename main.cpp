@@ -38,11 +38,9 @@ static int delay = 1000;
 #define VERSION "0.9.7"
 #endif
 
-static void testOcr(ImageInput* pImageInput) {
+static void testOcr(ImageInput* pImageInput, Config& config) {
     log4cpp::Category::getRoot().info("testOcr");
 
-    Config config;
-    config.loadConfig();
     ImageProcessor proc(config);
     proc.debugWindow();
     proc.debugDigits();
@@ -77,11 +75,9 @@ static void testOcr(ImageInput* pImageInput) {
     }
 }
 
-static void learnOcr(ImageInput* pImageInput) {
+static void learnOcr(ImageInput* pImageInput, Config& config) {
     log4cpp::Category::getRoot().info("learnOcr");
 
-    Config config;
-    config.loadConfig();
     ImageProcessor proc(config);
     proc.debugWindow();
 
@@ -110,11 +106,9 @@ static void learnOcr(ImageInput* pImageInput) {
     }
 }
 
-static void adjustCamera(ImageInput* pImageInput) {
+static void adjustCamera(ImageInput* pImageInput, Config& config) {
     log4cpp::Category::getRoot().info("adjustCamera");
 
-    Config config;
-    config.loadConfig();
     ImageProcessor proc(config);
     proc.debugWindow();
     proc.debugDigits();
@@ -162,11 +156,9 @@ static void capture(ImageInput* pImageInput) {
     }
 }
 
-static void writeData(ImageInput* pImageInput) {
+static void writeData(ImageInput* pImageInput, Config& config) {
     log4cpp::Category::getRoot().info("writeData");
 
-    Config config;
-    config.loadConfig();
     ImageProcessor proc(config);
 
     Plausi plausi;
@@ -206,7 +198,7 @@ static void writeData(ImageInput* pImageInput) {
 static void usage(const char* progname) {
     std::cout << "Program to read and recognize the counter of an electricity meter with OpenCV.\n";
     std::cout << "Version: " << VERSION << std::endl;
-    std::cout << "Usage: " << progname << " [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>] [-H]\n";
+    std::cout << "Usage: " << progname << " [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>] [-H] [-d]\n";
     std::cout << "\nImage input:\n";
     std::cout << "  -i <image directory> : read image files (png) from directory.\n";
     std::cout << "  -c <camera number> : read images from camera.\n";
@@ -219,7 +211,8 @@ static void usage(const char* progname) {
     std::cout << "\nOptions:\n";
     std::cout << "  -s <n> : Sleep n milliseconds after processing of each image (default=1000).\n";
     std::cout << "  -v <l> : Log level. One of DEBUG, INFO, ERROR (default).\n";
-    std::cout << "  -H : Enable HDR mode for Pi camera (better contrast and dynamic range).\n";
+    std::cout << "  -H : Enable HDR mode for better contrast and higher resolution (Pi Camera only).\n";
+    std::cout << "  -d : Enable debug/test mode - saves intermediate processing steps as images.\n";
 }
 
 static void configureLogging(const std::string & priority = "INFO", bool toConsole = false) {
@@ -248,8 +241,9 @@ int main(int argc, char **argv) {
     bool useHdri = false;
     int cameraDevice = -1;
     std::string inputDir;
+    bool testMode = false;
 
-    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:hH")) != -1) {
+    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:hdH")) != -1) {
     switch (opt) {
             case 'i':
                 inputDir = optarg;
@@ -277,8 +271,9 @@ int main(int argc, char **argv) {
                 break;
             case 'v':
                 logLevel = optarg;
-                // Convert to uppercase for log4cpp compatibility
-                std::transform(logLevel.begin(), logLevel.end(), logLevel.begin(), ::toupper);
+                break;
+            case 'd':
+                testMode = true;
                 break;
             case 'h':
             default:
@@ -311,6 +306,10 @@ int main(int argc, char **argv) {
 
     configureLogging(logLevel, cmd == 'a');
 
+    Config config;
+    config.loadConfig();
+    config.setTestMode(testMode);
+
     switch (cmd) {
         case 'o':
             pImageInput->setOutputDir(outputDir);
@@ -318,16 +317,16 @@ int main(int argc, char **argv) {
             capture(pImageInput);
             break;
         case 'l':
-            learnOcr(pImageInput);
+            learnOcr(pImageInput, config);
             break;
         case 't':
-            testOcr(pImageInput);
+            testOcr(pImageInput, config);
             break;
         case 'a':
-            adjustCamera(pImageInput);
+            adjustCamera(pImageInput, config);
             break;
         case 'w':
-            writeData(pImageInput);
+            writeData(pImageInput, config);
             break;
     }
 

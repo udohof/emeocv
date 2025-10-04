@@ -182,25 +182,29 @@ bool CameraInput::nextImage() {
     } else if (_useRpicam) {
         // rpicam-still für Einzelaufnahmen mit HDR-Option
         std::string filename = "/tmp/current_frame.jpg";
-        std::string cmd = "rpicam-still -o " + filename +
-                         " --timeout 1 --nopreview" +
-                         " --autofocus-mode auto" +
-                         " --autofocus-range normal" +
-                         " --autofocus-speed fast" +
-                         " --lens-position 0.0" +
-                         " --sharpness 1.5" +
-                         " --contrast 1.2" +
-                         " --quality 95";
+        std::string cmd = "rpicam-still -o " + filename + " --nopreview";
         
         if (_useHdri) {
-            // HDR-Modus: Verwende native Auflösung und skaliere danach
+            // HDR-Modus: Längeres Timeout für Autofocus, ZSL für bessere Ergebnisse
+            cmd += " --timeout 3000"; // 3 Sekunden für HDR + Autofocus
             cmd += " --hdr auto";
+            cmd += " --zsl"; // Zero Shutter Lag für bessere HDR-Ergebnisse
+            cmd += " --autofocus-on-capture 1"; // Fokus direkt vor Aufnahme
             // Keine explizite Auflösung im HDR-Modus setzen, um Verzerrungen zu vermeiden
-            log4cpp::Category::getRoot() << log4cpp::Priority::INFO << "HDR mode enabled - using native resolution";
+            log4cpp::Category::getRoot() << log4cpp::Priority::INFO << "HDR mode enabled - using native resolution with extended autofocus";
         } else {
-            // Normale Aufnahme: Explizite Auflösung setzen
+            // Normale Aufnahme: Kurzes Timeout, explizite Auflösung
+            cmd += " --timeout 1000"; // 1 Sekunde für normale Aufnahme
             cmd += " --width 640 --height 480";
         }
+        
+        // Gemeinsame Autofocus-Parameter für beide Modi
+        cmd += " --autofocus-mode auto";
+        cmd += " --autofocus-range normal";
+        cmd += " --autofocus-speed fast";
+        cmd += " --sharpness 1.5";
+        cmd += " --contrast 1.2";
+        cmd += " --quality 95";
         
         cmd += " > /dev/null 2>&1";
         
