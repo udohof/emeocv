@@ -288,6 +288,117 @@ void ImageProcessor::findCounterDigits() {
     // sort bounding boxes from left to right
     std::sort(alignedBoundingBoxes.begin(), alignedBoundingBoxes.end(), sortRectByX());
 
+    // Area of Interest approach: If enabled and we have exactly 6 boxes with regular spacing,
+    // predict the 7th digit (decimal place) position
+    if (_config.getAreaOfInterest() && alignedBoundingBoxes.size() == 6) {
+        rlog << log4cpp::Priority::INFO << "=== AREA OF INTEREST FOR 7TH DIGIT ===";
+        
+        // Check if the 6 boxes have regular spacing and similar sizes
+        bool regularSpacing = true;
+        bool similarSizes = true;
+        
+        // Calculate average spacing between digits
+        std::vector<int> spacings;
+        std::vector<int> widths;
+        std::vector<int> heights;
+        
+        for (size_t i = 0; i < alignedBoundingBoxes.size(); i++) {
+            widths.push_back(alignedBoundingBoxes[i].width);
+            heights.push_back(alignedBoundingBoxes[i].height);
+            
+            if (i > 0) {
+                int spacing = alignedBoundingBoxes[i].x - (alignedBoundingBoxes[i-1].x + alignedBoundingBoxes[i-1].width);
+                spacings.push_back(spacing);
+            }
+        }
+        
+        // Calculate averages
+        int avgSpacing = 0, avgWidth = 0, avgHeight = 0;
+        for (int s : spacings) avgSpacing += s;
+        for (int w : widths) avgWidth += w;
+        for (int h : heights) avgHeight += h;
+        
+        avgSpacing /= spacings.size();
+        avgWidth /= widths.size();
+        avgHeight /= heights.size();
+        
+        rlog << log4cpp::Priority::INFO << "Average spacing: " << avgSpacing << ", width: " << avgWidth << ", height: " << avgHeight;
+        
+        // Check regularity (spacing variance < 50% of average)
+        for (int s : spacings) {
+            if (abs(s - avgSpacing) > avgSpacing * 0.5) {
+                regularSpacing = false;
+                break;
+            }
+        }
+        
+        // Check size similarity (width/height variance < 30% of average)
+        for (size_t i = 0; i < widths.size(); i++) {
+            if (abs(widths[i] - avgWidth) > avgWidth * 0.3 || 
+                abs(heights[i] - avgHeight) > avgHeight * 0.3) {
+                similarSizes = false;
+                break;
+            }
+        }
+        
+        rlog << log4cpp::Priority::INFO << "Regular spacing: " << (regularSpacing ? "YES" : "NO") 
+             << ", Similar sizes: " << (similarSizes ? "YES" : "NO");
+        
+        if (regularSpacing && similarSizes && avgSpacing > 0) {
+            // Predict 7th digit position (decimal place)
+            cv::Rect lastBox = alignedBoundingBoxes[5]; // rightmost box
+            
+            // Position for decimal digit: after last box with same spacing
+            int decimalsX = lastBox.x + lastBox.width + avgSpacing;
+            int decimalsY = lastBox.y; // same Y as other digits
+            
+            // Make decimal box 25% narrower to exclude the tenths scale on the right
+            int decimalsWidth = (int)(avgWidth * 0.75);
+            int decimalsHeight = avgHeight;
+            
+            cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
+            
+            rlog << log4cpp::Priority::INFO << "Predicted 7th digit area: x=" << decimalsX 
+                 << " y=" << decimalsY << " w=" << decimalsWidth << " h=" << decimalsHeight;
+            
+            // Check if this area is within image bounds
+            if (decimalsX >= 0 && decimalsY >= 0 && 
+                decimalsX + decimalsWidth < img_ret.cols && 
+                decimalsY + decimalsHeight < img_ret.rows) {
+                
+                // Extract the predicted area
+                cv::Mat decimalsArea = img_ret(predictedDecimalBox);
+                
+                // Check if this area contains significant edges (potential digit)
+                cv::Scalar meanValue = cv::mean(decimalsArea);
+                int edgePixels = cv::countNonZero(decimalsArea);
+                double edgeDensity = (double)edgePixels / (decimalsWidth * decimalsHeight);
+                
+                rlog << log4cpp::Priority::INFO << "Decimal area edge density: " << edgeDensity 
+                     << " (pixels: " << edgePixels << "/" << (decimalsWidth * decimalsHeight) << ")";
+                
+                // If edge density is reasonable (between 5% and 50%), add as 7th digit
+                if (edgeDensity >= 0.05 && edgeDensity <= 0.5) {
+                    alignedBoundingBoxes.push_back(predictedDecimalBox);
+                    rlog << log4cpp::Priority::INFO << "Added predicted 7th digit! Total digits: " << alignedBoundingBoxes.size();
+                    
+                    // Re-sort with the new 7th digit
+                    std::sort(alignedBoundingBoxes.begin(), alignedBoundingBoxes.end(), sortRectByX());
+                } else {
+                    rlog << log4cpp::Priority::INFO << "Predicted area rejected - edge density outside range (0.05-0.5)";
+                }
+            } else {
+                rlog << log4cpp::Priority::INFO << "Predicted 7th digit area is outside image bounds";
+            }
+        } else {
+            rlog << log4cpp::Priority::INFO << "Cannot predict 7th digit - irregular spacing or sizes";
+        }
+        
+        rlog << log4cpp::Priority::INFO << "=== END AREA OF INTEREST ===";
+    }
+    
+    rlog << log4cpp::Priority::INFO << "Final number of aligned boxes: " << alignedBoundingBoxes.size();
+
     if (_debugEdges) {
         // draw contours
         cv::Mat cont = cv::Mat::zeros(edges.rows, edges.cols, CV_8UC1);

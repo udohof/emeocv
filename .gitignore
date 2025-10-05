@@ -1,20 +1,13 @@
-Debug/Config.o
-Debug/Directory.o
-Debug/emeocv.log
-Debug/main.o
-Debug/Plausi.o
-Debug/RRDatabase.o
-Debug/ImageProcessor.o
-Debug/KNearestOcr.o
-Debug/ImageInput.o
+# Build Artefakte
+Debug/*.o
 Debug/emeocv
+Debug/*.log
 Debug/config.yml
-Debug/DebugOutput.o
-Debug/ImageProcessor.o
-Debug/KNearestOcr.o
-Debug/emeocv
-Debug/main.o
-Debug/ImageInput.o
-Debug/emeocv
-Debug/ImageInput.o
-Debug/ImageInput.o
+
+# Debug Ausgaben
+debug_output/
+Debug/*.png
+
+# Weitere temporäre Dateien
+*.tmp
+*~

@@ -17,6 +17,9 @@ public:
     bool getTestMode() const { return _testMode; }
     void setTestMode(bool mode) { _testMode = mode; }
 
+    bool getAreaOfInterest() const { return _areaOfInterest; }
+    void setAreaOfInterest(bool mode) { _areaOfInterest = mode; }
+
     int getDigitMaxHeight() const {
         return _digitMaxHeight;
     }
@@ -59,6 +62,7 @@ private:
     int _cannyThreshold2;
     std::string _trainingDataFilename;
     bool _testMode = false;
+    bool _areaOfInterest = false;
 };
 
 #endif /* CONFIG_H_ */
