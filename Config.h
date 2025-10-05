@@ -20,6 +20,9 @@ public:
     bool getAreaOfInterest() const { return _areaOfInterest; }
     void setAreaOfInterest(bool mode) { _areaOfInterest = mode; }
 
+    bool getCropDigits() const { return _cropDigits; }
+    void setCropDigits(bool mode) { _cropDigits = mode; }
+
     int getDigitMaxHeight() const {
         return _digitMaxHeight;
     }
@@ -63,6 +66,7 @@ private:
     std::string _trainingDataFilename;
     bool _testMode = false;
     bool _areaOfInterest = false;
+    bool _cropDigits = false;
 };
 
 #endif /* CONFIG_H_ */

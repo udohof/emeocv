@@ -246,6 +246,34 @@ void ImageProcessor::filterContours(std::vector<std::vector<cv::Point> >& contou
 }
 
 /**
+ * Crop a rectangle by removing a percentage from each side to focus on center content.
+ * This helps remove frame edges and borders from digit recognition.
+ */
+cv::Rect ImageProcessor::cropRectangle(const cv::Rect& original, double cropPercent, const cv::Size& imageSize) {
+    // Different crop percentages: 10% horizontal (width), 3% vertical (height)
+    double cropPercentHorizontal = cropPercent;      // 10% for width
+    double cropPercentVertical = cropPercent * 0.3;  // 3% for height
+    
+    // Calculate crop amounts for each side
+    int cropX = (int)(original.width * cropPercentHorizontal);
+    int cropY = (int)(original.height * cropPercentVertical);
+    
+    // Calculate new rectangle dimensions
+    int newX = original.x + cropX;
+    int newY = original.y + cropY;
+    int newWidth = original.width - (2 * cropX);
+    int newHeight = original.height - (2 * cropY);
+    
+    // Ensure the cropped rectangle stays within image bounds
+    newX = std::max(0, std::min(newX, imageSize.width - 1));
+    newY = std::max(0, std::min(newY, imageSize.height - 1));
+    newWidth = std::max(1, std::min(newWidth, imageSize.width - newX));
+    newHeight = std::max(1, std::min(newHeight, imageSize.height - newY));
+    
+    return cv::Rect(newX, newY, newWidth, newHeight);
+}
+
+/**
  * Find and isolate the digits of the counter,
  */
 void ImageProcessor::findCounterDigits() {
@@ -409,20 +437,36 @@ void ImageProcessor::findCounterDigits() {
     // cut out found rectangles from edged image
     for (int i = 0; i < alignedBoundingBoxes.size(); ++i) {
         cv::Rect roi = alignedBoundingBoxes[i];
-        _digits.push_back(img_ret(roi));
-        if (_debugDigits) {
-            cv::rectangle(_img, roi, cv::Scalar(0, 255, 0), 2);
+        
+        cv::Rect finalRoi = roi;
+        
+        // Crop digits if enabled in config (10% width, 3% height to remove frame edges)
+        if (_config.getCropDigits()) {
+            finalRoi = cropRectangle(roi, 0.1, img_ret.size());
         }
         
-        // Debug: Save individual digit
+        _digits.push_back(img_ret(finalRoi));
+        if (_debugDigits) {
+            cv::rectangle(_img, roi, cv::Scalar(0, 255, 0), 2);
+            if (_config.getCropDigits()) {
+                cv::rectangle(_img, finalRoi, cv::Scalar(255, 0, 0), 1); // Blue inner rectangle when cropping
+            }
+        }
+        
+        // Debug: Save individual digit with crop info
         if (_config.getTestMode()) {
             std::map<std::string, std::string> params;
             params["digit_index"] = std::to_string(i);
-            params["x"] = std::to_string(roi.x);
-            params["y"] = std::to_string(roi.y);
-            params["width"] = std::to_string(roi.width);
-            params["height"] = std::to_string(roi.height);
-            DebugOutput::saveDebugImage(img_ret(roi), "ImageProcessor_digit", params);
+            params["x"] = std::to_string(finalRoi.x);
+            params["y"] = std::to_string(finalRoi.y);
+            params["width"] = std::to_string(finalRoi.width);
+            params["height"] = std::to_string(finalRoi.height);
+            if (_config.getCropDigits()) {
+                params["crop"] = "10pct_width_3pct_height";
+            } else {
+                params["crop"] = "none";
+            }
+            DebugOutput::saveDebugImage(img_ret(finalRoi), "ImageProcessor_digit", params);
         }
     }
 }
