@@ -10,7 +10,7 @@
 Config::Config() :
     _rotationDegrees(0), _ocrMaxDist(5e5), _digitMinHeight(20), _digitMaxHeight(
         90), _digitYAlignment(10), _cannyThreshold1(100), _cannyThreshold2(
-        200), _trainingDataFilename("trainctr.yml"), _testMode(false) {
+        200), _trainingDataFilename("trainctr.yml"), _testMode(false), _areaOfInterest(false) {
 }
 
 void Config::saveConfig() {
@@ -24,6 +24,7 @@ void Config::saveConfig() {
     fs << "ocrMaxDist" << _ocrMaxDist;
     fs << "trainingDataFilename" << _trainingDataFilename;
     fs << "testMode" << _testMode;
+    fs << "areaOfInterest" << _areaOfInterest;
     fs.release();
 }
 
@@ -39,6 +40,7 @@ void Config::loadConfig() {
         fs["ocrMaxDist"] >> _ocrMaxDist;
         fs["trainingDataFilename"] >> _trainingDataFilename;
         if (!fs["testMode"].empty()) fs["testMode"] >> _testMode;
+        if (!fs["areaOfInterest"].empty()) fs["areaOfInterest"] >> _areaOfInterest;
         fs.release();
     } else {
         // no config file - create an initial one with default values

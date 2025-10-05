@@ -288,9 +288,9 @@ void ImageProcessor::findCounterDigits() {
     // sort bounding boxes from left to right
     std::sort(alignedBoundingBoxes.begin(), alignedBoundingBoxes.end(), sortRectByX());
 
-    // Area of Interest approach: If we have exactly 6 boxes with regular spacing,
+    // Area of Interest approach: If enabled and we have exactly 6 boxes with regular spacing,
     // predict the 7th digit (decimal place) position
-    if (alignedBoundingBoxes.size() == 6) {
+    if (_config.getAreaOfInterest() && alignedBoundingBoxes.size() == 6) {
         rlog << log4cpp::Priority::INFO << "=== AREA OF INTEREST FOR 7TH DIGIT ===";
         
         // Check if the 6 boxes have regular spacing and similar sizes
@@ -352,8 +352,8 @@ void ImageProcessor::findCounterDigits() {
             int decimalsX = lastBox.x + lastBox.width + avgSpacing;
             int decimalsY = lastBox.y; // same Y as other digits
             
-            // Use same size as other digits for consistency
-            int decimalsWidth = avgWidth;
+            // Make decimal box 20% narrower to exclude the tenths scale on the right
+            int decimalsWidth = (int)(avgWidth * 0.8);
             int decimalsHeight = avgHeight;
             
             cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
