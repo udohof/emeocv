@@ -352,8 +352,8 @@ void ImageProcessor::findCounterDigits() {
             int decimalsX = lastBox.x + lastBox.width + avgSpacing;
             int decimalsY = lastBox.y; // same Y as other digits
             
-            // Make decimal box 20% narrower to exclude the tenths scale on the right
-            int decimalsWidth = (int)(avgWidth * 0.8);
+            // Make decimal box 25% narrower to exclude the tenths scale on the right
+            int decimalsWidth = (int)(avgWidth * 0.75);
             int decimalsHeight = avgHeight;
             
             cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
