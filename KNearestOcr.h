@@ -10,8 +10,8 @@
 #include <list>
 #include <string>
 #include "opencv2/core/version.hpp"
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/ml/ml.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/ml.hpp>
 
 #include "Config.h"
 

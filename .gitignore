@@ -11,3 +11,22 @@ Debug/*.png
 # Weitere tempor√§re Dateien
 *.tmp
 *~
+
+# Kamera- und OCR-Ausgabedateien
+*.jpg
+*.jpeg
+*.png
+*.bmp
+*.tiff
+*.tif
+
+# Kompilierte Anwendungen
+*.exe
+
+# Tempor‰re Build-Dateien
+*.o
+*.obj
+*.log
+
+# VS Code tempor‰re Dateien
+compile_commands.json

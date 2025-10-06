@@ -6,10 +6,12 @@
 #include <vector>
 #include <iostream>
 
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 
+#ifdef HAVE_LOG4CPP
 #include <log4cpp/Category.hh>
+#endif
 #include <log4cpp/Priority.hh>
 
 #include "ImageProcessor.h"

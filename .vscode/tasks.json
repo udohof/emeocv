@@ -1,0 +1,90 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build Camera Test (Windows)",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-o", "camera_test.exe", 
+                "camera_test.cpp",
+                "-I\"C:/msys64/mingw64/include/opencv4\"",
+                "-L\"C:/msys64/mingw64/lib\"",
+                "-lopencv_core",
+                "-lopencv_imgproc", 
+                "-lopencv_imgcodecs",
+                "-lopencv_videoio",
+                "-lopencv_highgui",
+                "-std=c++11"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "echo": true,
+                "reveal": "always", 
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Build EME OCR Windows",
+            "type": "shell",
+            "command": "g++",
+            "args": [
+                "-o", "emeocv_windows.exe", 
+                "emeocv_windows.cpp",
+                "-I\"C:/msys64/mingw64/include/opencv4\"",
+                "-L\"C:/msys64/mingw64/lib\"",
+                "-lopencv_core",
+                "-lopencv_imgproc", 
+                "-lopencv_imgcodecs",
+                "-lopencv_videoio",
+                "-lopencv_highgui",
+                "-lopencv_ml",
+                "-std=c++11",
+                "-O2"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always", 
+                "focus": false,
+                "panel": "shared"
+            },
+            "problemMatcher": ["$gcc"]
+        },
+        {
+            "label": "Run Camera Test",
+            "type": "shell",
+            "command": "${workspaceFolder}/camera_test.exe",
+            "args": [],
+            "group": "test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "dependsOn": "Build Camera Test (Windows)"
+        },
+        {
+            "label": "Clean Build Files",
+            "type": "shell",
+            "command": "powershell",
+            "args": [
+                "-Command",
+                "Remove-Item -Path '*.exe', '*.jpg', '*.png' -Force -ErrorAction SilentlyContinue"
+            ],
+            "group": "build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            }
+        }
+    ]
+}

@@ -8,14 +8,26 @@
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
-#include <unistd.h>
 #include <stdlib.h>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <io.h>
+#include <direct.h>
+#include <sys/stat.h>
+#define usleep(x) Sleep((x) / 1000)
+#define stat _stat
+#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+#else
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#endif
 
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
+#ifdef HAVE_LOG4CPP
 #include <log4cpp/Category.hh>
 #include <log4cpp/Appender.hh>
 #include <log4cpp/FileAppender.hh>
@@ -24,13 +36,16 @@
 #include <log4cpp/PatternLayout.hh>
 #include <log4cpp/SimpleLayout.hh>
 #include <log4cpp/Priority.hh>
+#endif
 
 #include "Config.h"
 #include "Directory.h"
 #include "ImageProcessor.h"
 #include "KNearestOcr.h"
 #include "Plausi.h"
+#ifndef NO_RRD
 #include "RRDatabase.h"
+#endif
 
 static int delay = 1000;
 
@@ -39,7 +54,11 @@ static int delay = 1000;
 #endif
 
 static void testOcr(ImageInput* pImageInput, Config& config) {
+#ifdef HAVE_LOG4CPP
     log4cpp::Category::getRoot().info("testOcr");
+#else
+    std::cout << "testOcr" << std::endl;
+#endif
 
     ImageProcessor proc(config);
     proc.debugWindow();
@@ -76,7 +95,11 @@ static void testOcr(ImageInput* pImageInput, Config& config) {
 }
 
 static void learnOcr(ImageInput* pImageInput, Config& config) {
+#ifdef HAVE_LOG4CPP
     log4cpp::Category::getRoot().info("learnOcr");
+#else
+    std::cout << "learnOcr" << std::endl;
+#endif
 
     ImageProcessor proc(config);
     proc.debugWindow();
@@ -107,7 +130,11 @@ static void learnOcr(ImageInput* pImageInput, Config& config) {
 }
 
 static void adjustCamera(ImageInput* pImageInput, Config& config) {
+#ifdef HAVE_LOG4CPP
     log4cpp::Category::getRoot().info("adjustCamera");
+#else
+    std::cout << "adjustCamera" << std::endl;
+#endif
 
     ImageProcessor proc(config);
     proc.debugWindow();
@@ -146,7 +173,11 @@ static void adjustCamera(ImageInput* pImageInput, Config& config) {
 }
 
 static void capture(ImageInput* pImageInput) {
+#ifdef HAVE_LOG4CPP
     log4cpp::Category::getRoot().info("capture");
+#else
+    std::cout << "capture" << std::endl;
+#endif
 
     std::cout << "Capturing images into directory.\n";
     std::cout << "<Ctrl-C> to quit.\n";
@@ -157,13 +188,19 @@ static void capture(ImageInput* pImageInput) {
 }
 
 static void writeData(ImageInput* pImageInput, Config& config) {
+#ifdef HAVE_LOG4CPP
     log4cpp::Category::getRoot().info("writeData");
+#else
+    std::cout << "writeData" << std::endl;
+#endif
 
     ImageProcessor proc(config);
 
     Plausi plausi;
 
+#ifndef NO_RRD
     RRDatabase rrd("emeter.rrd");
+#endif
 
     struct stat st;
 
@@ -182,7 +219,11 @@ static void writeData(ImageInput* pImageInput, Config& config) {
         if (proc.getOutput().size() == 7) {
             std::string result = ocr.recognize(proc.getOutput());
             if (plausi.check(result, pImageInput->getTime())) {
+#ifndef NO_RRD
                 rrd.update(plausi.getCheckedTime(), plausi.getCheckedValue());
+#else
+                std::cout << "Value: " << plausi.getCheckedValue() << " at " << plausi.getCheckedTime() << std::endl;
+#endif
             }
         }
         if (0 == stat("imgdebug", &st) && S_ISDIR(st.st_mode)) {
@@ -217,6 +258,7 @@ static void usage(const char* progname) {
 }
 
 static void configureLogging(const std::string & priority = "INFO", bool toConsole = false) {
+#ifdef HAVE_LOG4CPP
     log4cpp::Appender *fileAppender = new log4cpp::FileAppender("default", "emeocv.log");
     log4cpp::PatternLayout* layout = new log4cpp::PatternLayout();
     layout->setConversionPattern("%d{%d.%m.%Y %H:%M:%S} %p: %m%n");
@@ -229,7 +271,58 @@ static void configureLogging(const std::string & priority = "INFO", bool toConso
         consoleAppender->setLayout(new log4cpp::SimpleLayout());
         root.addAppender(consoleAppender);
     }
+#else
+    std::cout << "Logging disabled (Windows build)" << std::endl;
+#endif
 }
+
+#ifdef _WIN32
+// Simple getopt for Windows
+char *optarg = nullptr;
+int optind = 1;
+
+int getopt(int argc, char * const argv[], const char *optstring) {
+    static int optpos = 1;
+    
+    if (optind >= argc || argv[optind] == nullptr || argv[optind][0] != '-' || argv[optind][1] == '\0') {
+        return -1;
+    }
+    
+    if (strcmp(argv[optind], "--") == 0) {
+        optind++;
+        return -1;
+    }
+    
+    char c = argv[optind][optpos];
+    char *cp = const_cast<char*>(strchr(optstring, c));
+    
+    if (cp == nullptr || c == ':') {
+        optpos++;
+        if (argv[optind][optpos] == '\0') {
+            optind++;
+            optpos = 1;
+        }
+        return '?';
+    }
+    
+    optpos++;
+    if (argv[optind][optpos] == '\0') {
+        optind++;
+        optpos = 1;
+    }
+    
+    if (cp[1] == ':') {
+        if (optind >= argc) {
+            return '?';
+        }
+        optarg = argv[optind];
+        optind++;
+        optpos = 1;
+    }
+    
+    return c;
+}
+#endif
 
 int main(int argc, char **argv) {
     int opt;
@@ -319,7 +412,11 @@ int main(int argc, char **argv) {
     switch (cmd) {
         case 'o':
             pImageInput->setOutputDir(outputDir);
+#ifdef _WIN32
+            _mkdir(outputDir.c_str());
+#else
             mkdir(outputDir.c_str(), 0755);
+#endif
             capture(pImageInput);
             break;
         case 'l':

@@ -3,11 +3,15 @@
  *
  */
 
+#ifdef HAVE_RRD
 #include <rrd.h>
+#endif
 #include <iostream>
 
+#ifdef HAVE_LOG4CPP
 #include <log4cpp/Category.hh>
 #include <log4cpp/Priority.hh>
+#endif
 
 #include "RRDatabase.h"
 

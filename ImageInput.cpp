@@ -10,11 +10,13 @@
 #include <unistd.h>
 #include <cstdlib>
 
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/highgui/highgui.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/highgui.hpp>
 
+#ifdef HAVE_LOG4CPP
 #include <log4cpp/Category.hh>
 #include <log4cpp/Priority.hh>
+#endif
 
 #include "ImageInput.h"
 

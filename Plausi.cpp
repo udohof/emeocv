@@ -9,7 +9,9 @@
 #include <ctime>
 #include <cstdlib>
 
+#ifdef HAVE_LOG4CPP
 #include <log4cpp/Category.hh>
+#endif
 #include <log4cpp/Priority.hh>
 
 #include "Plausi.h"
