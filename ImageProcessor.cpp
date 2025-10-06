@@ -274,6 +274,63 @@ cv::Rect ImageProcessor::cropRectangle(const cv::Rect& original, double cropPerc
 }
 
 /**
+ * Filter fragments from digit images using morphological operations.
+ * Steps: Dilate → Find contours → Keep largest → Delete smaller → Erode
+ * This removes small fragments while preserving the main digit structure.
+ */
+cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
+    // Work with a copy of the input image
+    cv::Mat result = digitImage.clone();
+    
+    // Step 1: Dilate edges to merge nearby contours (digits and fragments)
+    // Kernel size should be balanced: big enough to merge digit parts, 
+    // small enough to keep digit and fragments separate
+    int kernelSize = std::max(2, std::min(digitImage.rows, digitImage.cols) / 15); // Dynamic kernel size
+    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
+    cv::Mat dilated;
+    cv::dilate(result, dilated, kernel);
+    
+    // Step 2: Find contours in dilated image
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    cv::findContours(dilated, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+    
+    if (contours.empty()) {
+        return result; // No contours found, return original
+    }
+    
+    if (contours.size() == 1) {
+        // Only one contour found, no fragments to remove
+        return result;
+    }
+    
+    // Step 3: Find the largest contour (assumed to be the main digit)
+    double maxArea = 0;
+    int maxAreaIdx = 0;
+    for (size_t i = 0; i < contours.size(); i++) {
+        double area = cv::contourArea(contours[i]);
+        if (area > maxArea) {
+            maxArea = area;
+            maxAreaIdx = i;
+        }
+    }
+    
+    // Step 4: Create mask with only the largest contour
+    cv::Mat mask = cv::Mat::zeros(dilated.size(), CV_8UC1);
+    cv::drawContours(mask, contours, maxAreaIdx, cv::Scalar(255), cv::FILLED);
+    
+    // Step 5: Apply mask to dilated image (preserves merged contour)
+    cv::Mat filteredDilated = cv::Mat::zeros(dilated.size(), CV_8UC1);
+    dilated.copyTo(filteredDilated, mask);
+    
+    // Step 6: Erode the filtered result back to original thickness
+    cv::Mat finalResult;
+    cv::erode(filteredDilated, finalResult, kernel);
+    
+    return finalResult;
+}
+
+/**
  * Find and isolate the digits of the counter,
  */
 void ImageProcessor::findCounterDigits() {
@@ -445,7 +502,15 @@ void ImageProcessor::findCounterDigits() {
             finalRoi = cropRectangle(roi, 0.1, img_ret.size());
         }
         
-        _digits.push_back(img_ret(finalRoi));
+        // Extract digit image
+        cv::Mat digitImage = img_ret(finalRoi);
+        
+        // Apply fragment filtering if cropping is enabled
+        if (_config.getCropDigits()) {
+            digitImage = filterFragments(digitImage);
+        }
+        
+        _digits.push_back(digitImage);
         if (_debugDigits) {
             cv::rectangle(_img, roi, cv::Scalar(0, 255, 0), 2);
             if (_config.getCropDigits()) {
@@ -463,10 +528,12 @@ void ImageProcessor::findCounterDigits() {
             params["height"] = std::to_string(finalRoi.height);
             if (_config.getCropDigits()) {
                 params["crop"] = "10pct_width_3pct_height";
+                params["filter"] = "fragments_removed";
             } else {
                 params["crop"] = "none";
+                params["filter"] = "none";
             }
-            DebugOutput::saveDebugImage(img_ret(finalRoi), "ImageProcessor_digit", params);
+            DebugOutput::saveDebugImage(digitImage, "ImageProcessor_digit", params);
         }
     }
 }
