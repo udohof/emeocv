@@ -10,7 +10,7 @@
 Config::Config() :
     _rotationDegrees(0), _ocrMaxDist(5e5), _digitMinHeight(20), _digitMaxHeight(
         90), _digitYAlignment(10), _cannyThreshold1(100), _cannyThreshold2(
-        200), _trainingDataFilename("trainctr.yml"), _testMode(false), _areaOfInterest(false), _cropDigits(false) {
+        200), _trainingDataFilename("trainctr.yml"), _testMode(false), _areaOfInterest(false), _cropDigits(false), _perspectiveCorrection(false) {
 }
 
 void Config::saveConfig() {
@@ -26,6 +26,7 @@ void Config::saveConfig() {
     fs << "testMode" << _testMode;
     fs << "areaOfInterest" << _areaOfInterest;
     fs << "cropDigits" << _cropDigits;
+    fs << "perspectiveCorrection" << _perspectiveCorrection;
     fs.release();
 }
 
@@ -43,6 +44,7 @@ void Config::loadConfig() {
         if (!fs["testMode"].empty()) fs["testMode"] >> _testMode;
         if (!fs["areaOfInterest"].empty()) fs["areaOfInterest"] >> _areaOfInterest;
         if (!fs["cropDigits"].empty()) fs["cropDigits"] >> _cropDigits;
+        if (!fs["perspectiveCorrection"].empty()) fs["perspectiveCorrection"] >> _perspectiveCorrection;
         fs.release();
     } else {
         // no config file - create an initial one with default values

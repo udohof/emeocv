@@ -27,7 +27,8 @@ public:
 };
 
 ImageProcessor::ImageProcessor(const Config & config) :
-        _config(config), _debugWindow(false), _debugSkew(false), _debugDigits(false), _debugEdges(false) {
+        _config(config), _debugWindow(false), _debugSkew(false), _debugDigits(false), _debugEdges(false),
+        _perspectiveScaleX(1.0), _perspectiveScaleY(1.0), _perspectiveCorrectionApplied(false) {
 }
 
 /**
@@ -88,6 +89,9 @@ void ImageProcessor::process() {
         std::map<std::string, std::string> params;
         DebugOutput::saveDebugImage(_imgGray, "ImageProcessor_grayscale", params);
     }
+
+    // Perspective correction using homography (before rotation/skew correction)
+    correctPerspective();
 
     // initial rotation to get the digits up
     rotate(_config.getRotationDegrees());
@@ -222,8 +226,23 @@ void ImageProcessor::findAlignedBoxes(std::vector<cv::Rect>::const_iterator begi
     ++it;
     result.push_back(start);
 
+    // Calculate scaled Y alignment based on perspective correction
+    int scaledYAlignment = _config.getDigitYAlignment();
+    int scaledHeightTolerance = 5;
+    
+    if (_perspectiveCorrectionApplied) {
+        // More lenient Y-alignment after perspective correction due to possible distortion
+        scaledYAlignment = (int)(_config.getDigitYAlignment() * _perspectiveScaleY * 1.5); // 50% more tolerance
+        scaledHeightTolerance = (int)(10 * _perspectiveScaleY); // Double the height tolerance
+        
+        log4cpp::Category& rlog = log4cpp::Category::getRoot();
+        rlog << log4cpp::Priority::INFO << "Using scaled Y-alignment: " << scaledYAlignment 
+             << " (base: " << _config.getDigitYAlignment() << ", scale: " << _perspectiveScaleY 
+             << "), height tolerance: " << scaledHeightTolerance;
+    }
+
     for (; it != end; ++it) {
-        if (abs(start.y - it->y) < _config.getDigitYAlignment() && abs(start.height - it->height) < 5) {
+        if (abs(start.y - it->y) < scaledYAlignment && abs(start.height - it->height) < scaledHeightTolerance) {
             result.push_back(*it);
         }
     }
@@ -234,11 +253,29 @@ void ImageProcessor::findAlignedBoxes(std::vector<cv::Rect>::const_iterator begi
  */
 void ImageProcessor::filterContours(std::vector<std::vector<cv::Point> >& contours,
         std::vector<cv::Rect>& boundingBoxes, std::vector<std::vector<cv::Point> >& filteredContours) {
+    // Calculate scaled parameters based on perspective correction
+    int scaledMinHeight = _config.getDigitMinHeight();
+    int scaledMaxHeight = _config.getDigitMaxHeight();
+    int scaledMinWidth = 5;
+    
+    if (_perspectiveCorrectionApplied) {
+        scaledMinHeight = (int)(_config.getDigitMinHeight() * _perspectiveScaleY);
+        // More generous maximum height to accommodate perspective distortion
+        scaledMaxHeight = (int)(_config.getDigitMaxHeight() * _perspectiveScaleY * 1.3); // 30% more tolerance
+        scaledMinWidth = (int)(5 * _perspectiveScaleX);
+        
+        log4cpp::Category& rlog = log4cpp::Category::getRoot();
+        rlog << log4cpp::Priority::INFO << "Using scaled parameters for digit detection: minHeight=" 
+             << scaledMinHeight << " (was " << _config.getDigitMinHeight() << "), maxHeight=" 
+             << scaledMaxHeight << " (was " << _config.getDigitMaxHeight() << "), minWidth=" 
+             << scaledMinWidth << " (was 5), Y-scale=" << _perspectiveScaleY;
+    }
+    
     // filter contours by bounding rect size
     for (size_t i = 0; i < contours.size(); i++) {
         cv::Rect bounds = cv::boundingRect(contours[i]);
-        if (bounds.height > _config.getDigitMinHeight() && bounds.height < _config.getDigitMaxHeight()
-                && bounds.width > 5 && bounds.width < bounds.height) {
+        if (bounds.height > scaledMinHeight && bounds.height < scaledMaxHeight
+                && bounds.width > scaledMinWidth && bounds.width < bounds.height) {
             boundingBoxes.push_back(bounds);
             filteredContours.push_back(contours[i]);
         }
@@ -546,8 +583,8 @@ void ImageProcessor::findCounterDigits() {
             int decimalsX = lastBox.x + lastBox.width + avgSpacing;
             int decimalsY = lastBox.y; // same Y as other digits
             
-            // Use 110% of average width for decimal box to ensure complete digit capture
-            int decimalsWidth = (int)(avgWidth * 1.10);
+            // Use 120% of average width for decimal box to ensure complete digit capture
+            int decimalsWidth = (int)(avgWidth * 1.20);
             int decimalsHeight = avgHeight;
             
             cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
@@ -666,4 +703,218 @@ void ImageProcessor::findCounterDigits() {
             DebugOutput::saveDebugImage(digitImage, "ImageProcessor_digit", params);
         }
     }
+}
+
+/**
+ * Correct perspective distortion using homography transformation.
+ * This function detects the meter display corners and applies perspective correction
+ * to make the image appear as if viewed from directly in front.
+ */
+void ImageProcessor::correctPerspective() {
+    if (!_config.getPerspectiveCorrection()) {
+        return; // Skip if perspective correction is disabled
+    }
+    
+    log4cpp::Category& rlog = log4cpp::Category::getRoot();
+    rlog << log4cpp::Priority::INFO << "=== PERSPECTIVE CORRECTION ===";
+    
+    // Detect the four corners of the meter display
+    std::vector<cv::Point2f> srcCorners = detectMeterCorners();
+    
+    if (srcCorners.size() == 4) {
+        // Define target rectangle (straight view) - maintain aspect ratio
+        int targetWidth = _imgGray.cols;
+        int targetHeight = _imgGray.rows;
+        
+        std::vector<cv::Point2f> dstCorners = {
+            cv::Point2f(0, 0),                           // top-left
+            cv::Point2f(targetWidth - 1, 0),            // top-right
+            cv::Point2f(targetWidth - 1, targetHeight - 1), // bottom-right
+            cv::Point2f(0, targetHeight - 1)            // bottom-left
+        };
+        
+        // Calculate homography matrix
+        cv::Mat homography = cv::getPerspectiveTransform(srcCorners, dstCorners);
+        
+        // Calculate scaling factors before transformation
+        cv::Rect originalBounds = cv::boundingRect(srcCorners);
+        _perspectiveScaleX = (double)targetWidth / originalBounds.width;
+        _perspectiveScaleY = (double)targetHeight / originalBounds.height;
+        _perspectiveCorrectionApplied = true;
+        
+        rlog << log4cpp::Priority::INFO << "Perspective scaling factors: X=" << _perspectiveScaleX 
+             << ", Y=" << _perspectiveScaleY << " (original area: " << originalBounds.width 
+             << "x" << originalBounds.height << " -> " << targetWidth << "x" << targetHeight << ")";
+        
+        // Apply perspective correction
+        cv::Mat corrected;
+        cv::warpPerspective(_imgGray, corrected, homography, _imgGray.size());
+        _imgGray = corrected;
+        
+        if (_debugWindow) {
+            cv::warpPerspective(_img, corrected, homography, _img.size());
+            _img = corrected;
+        }
+        
+        rlog << log4cpp::Priority::INFO << "Perspective correction applied successfully";
+        
+        // Debug: Save corrected image
+        if (_config.getTestMode()) {
+            std::map<std::string, std::string> params;
+            params["method"] = "homography";
+            params["corners"] = std::to_string(srcCorners.size());
+            DebugOutput::saveDebugImage(_imgGray, "ImageProcessor_perspective_corrected", params);
+        }
+    } else {
+        rlog << log4cpp::Priority::WARN << "Could not detect 4 corners for perspective correction (found: " 
+             << srcCorners.size() << ")";
+    }
+    
+    rlog << log4cpp::Priority::INFO << "=== END PERSPECTIVE CORRECTION ===";
+}
+
+/**
+ * Detect the four corners of the meter display for perspective correction.
+ * Uses contour detection to find rectangular shapes that likely represent the meter frame.
+ */
+std::vector<cv::Point2f> ImageProcessor::detectMeterCorners() {
+    std::vector<cv::Point2f> corners;
+    
+    log4cpp::Category& rlog = log4cpp::Category::getRoot();
+    
+    // Use Canny edge detection for better contour detection
+    cv::Mat edges = cannyEdges();
+    
+    // Find contours
+    std::vector<std::vector<cv::Point>> contours;
+    std::vector<cv::Vec4i> hierarchy;
+    
+#if CV_MAJOR_VERSION == 2
+    cv::findContours(edges, contours, hierarchy, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_SIMPLE);
+#elif CV_MAJOR_VERSION == 3 | 4
+    cv::findContours(edges, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+#endif
+    
+        // Enhanced approach: Look for larger quadrilateral contours representing the meter display
+        double maxArea = 0;
+        std::vector<cv::Point> bestRectangle;
+        
+        rlog << log4cpp::Priority::INFO << "Analyzing " << contours.size() << " contours for perspective correction";
+        
+        // NEW APPROACH: Find largest contours and create bounding rectangles from them
+        // This works better for perspective-distorted images where perfect rectangles don't exist
+        
+        std::vector<std::pair<double, size_t>> largeContours;
+        double imageArea = _imgGray.rows * _imgGray.cols;
+        
+        // Collect all contours with reasonable size
+        for (size_t i = 0; i < contours.size(); i++) {
+            double area = cv::contourArea(contours[i]);
+            if (area > imageArea * 0.005) { // At least 0.5% of image
+                largeContours.push_back(std::make_pair(area, i));
+            }
+        }
+        
+        // Sort by area (largest first)
+        std::sort(largeContours.begin(), largeContours.end(), std::greater<std::pair<double, size_t>>());
+        
+        rlog << log4cpp::Priority::INFO << "Found " << largeContours.size() << " large contours for perspective correction";
+        
+        // Try the largest contours - use their bounding rectangles as approximation
+        for (size_t idx = 0; idx < std::min(largeContours.size(), size_t(5)); idx++) {
+            size_t i = largeContours[idx].second;
+            double area = largeContours[idx].first;
+            double areaPercent = (area / imageArea) * 100;
+            
+            rlog << log4cpp::Priority::INFO << "Considering contour " << i << ": area=" << area 
+                 << " (" << areaPercent << "% of image) - rank #" << (idx + 1);
+            
+            // Get bounding rectangle of this large contour
+            cv::Rect boundingRect = cv::boundingRect(contours[i]);
+            double widthRatio = (double)boundingRect.width / _imgGray.cols;
+            double heightRatio = (double)boundingRect.height / _imgGray.rows;
+            
+            // Accept if it spans a reasonable part of the image - strict criteria to prevent instability
+            if (area > imageArea * 0.10 && widthRatio > 0.50 && heightRatio > 0.30) {
+                // Create rectangle from bounding box - this gives us guaranteed 4 corners
+                bestRectangle = {
+                    cv::Point(boundingRect.x, boundingRect.y),                                     // top-left
+                    cv::Point(boundingRect.x + boundingRect.width, boundingRect.y),              // top-right  
+                    cv::Point(boundingRect.x + boundingRect.width, boundingRect.y + boundingRect.height), // bottom-right
+                    cv::Point(boundingRect.x, boundingRect.y + boundingRect.height)              // bottom-left
+                };
+                maxArea = area;
+                
+                rlog << log4cpp::Priority::INFO << "Using bounding rectangle of large contour: " 
+                     << "size=" << boundingRect.width << "x" << boundingRect.height 
+                     << " (" << (widthRatio*100) << "% x " << (heightRatio*100) << "%), area=" << areaPercent << "%";
+                break;
+            }
+        }
+        
+        // If still nothing found, try with even more permissive criteria
+        if (bestRectangle.empty() && !largeContours.empty()) {
+            size_t i = largeContours[0].second; // Take the very largest
+            double area = largeContours[0].first;
+            cv::Rect boundingRect = cv::boundingRect(contours[i]);
+            
+            if (area > imageArea * 0.08 && cv::boundingRect(contours[i]).width > _imgGray.cols * 0.45) { // Strict fallback to prevent instability
+                bestRectangle = {
+                    cv::Point(boundingRect.x, boundingRect.y),
+                    cv::Point(boundingRect.x + boundingRect.width, boundingRect.y),
+                    cv::Point(boundingRect.x + boundingRect.width, boundingRect.y + boundingRect.height),
+                    cv::Point(boundingRect.x, boundingRect.y + boundingRect.height)
+                };
+                maxArea = area;
+                
+                rlog << log4cpp::Priority::INFO << "Using largest available contour as fallback: area=" 
+                     << (area/imageArea*100) << "%, size=" << boundingRect.width << "x" << boundingRect.height;
+            }
+        }
+        
+        // Fallback: If no suitable contour found, use image corners with slight inset
+        if (bestRectangle.empty()) {
+            rlog << log4cpp::Priority::INFO << "No suitable contour found, using image corners as fallback";
+            int inset = std::min(_imgGray.rows, _imgGray.cols) / 20; // 5% inset
+            bestRectangle = {
+                cv::Point(inset, inset),                                    // top-left
+                cv::Point(_imgGray.cols - inset, inset),                   // top-right  
+                cv::Point(_imgGray.cols - inset, _imgGray.rows - inset),   // bottom-right
+                cv::Point(inset, _imgGray.rows - inset)                    // bottom-left
+            };
+            rlog << log4cpp::Priority::INFO << "Using fallback corners with " << inset << "px inset";
+        }
+        
+    if (!bestRectangle.empty()) {
+        // Convert to Point2f and sort corners in consistent order
+        for (const auto& pt : bestRectangle) {
+            corners.push_back(cv::Point2f(pt.x, pt.y));
+        }
+        
+        // Sort corners: top-left, top-right, bottom-right, bottom-left
+        std::sort(corners.begin(), corners.end(), [](const cv::Point2f& a, const cv::Point2f& b) {
+            return (a.y < b.y) || (a.y == b.y && a.x < b.x);
+        });
+        
+        // Ensure proper order: top two points, then bottom two points
+        if (corners.size() == 4) {
+            // Sort top two points by x-coordinate
+            if (corners[0].x > corners[1].x) {
+                std::swap(corners[0], corners[1]);
+            }
+            // Sort bottom two points by x-coordinate  
+            if (corners[2].x < corners[3].x) {
+                std::swap(corners[2], corners[3]);
+            }
+        }
+        
+        rlog << log4cpp::Priority::INFO << "Detected rectangular meter frame with area: " << maxArea;
+        for (size_t i = 0; i < corners.size(); i++) {
+            rlog << log4cpp::Priority::INFO << "Corner " << i << ": (" << corners[i].x << ", " << corners[i].y << ")";
+        }
+    } else {
+        rlog << log4cpp::Priority::WARN << "No suitable rectangular contour found for perspective correction";
+    }
+    
+    return corners;
 }

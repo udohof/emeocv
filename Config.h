@@ -23,6 +23,9 @@ public:
     bool getCropDigits() const { return _cropDigits; }
     void setCropDigits(bool mode) { _cropDigits = mode; }
 
+    bool getPerspectiveCorrection() const { return _perspectiveCorrection; }
+    void setPerspectiveCorrection(bool mode) { _perspectiveCorrection = mode; }
+
     int getDigitMaxHeight() const {
         return _digitMaxHeight;
     }
@@ -67,6 +70,7 @@ private:
     bool _testMode = false;
     bool _areaOfInterest = false;
     bool _cropDigits = false;
+    bool _perspectiveCorrection = false;
 };
 
 #endif /* CONFIG_H_ */
