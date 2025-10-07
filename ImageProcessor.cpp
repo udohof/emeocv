@@ -274,6 +274,30 @@ cv::Rect ImageProcessor::cropRectangle(const cv::Rect& original, double cropPerc
 }
 
 /**
+ * Crop rectangle with custom horizontal and vertical percentages.
+ * Used for special cases like AOI digits that need different cropping.
+ */
+cv::Rect ImageProcessor::cropRectangleCustom(const cv::Rect& original, double cropPercentHorizontal, double cropPercentVertical, const cv::Size& imageSize) {
+    // Calculate crop amounts for each side
+    int cropX = (int)(original.width * cropPercentHorizontal);
+    int cropY = (int)(original.height * cropPercentVertical);
+    
+    // Calculate new rectangle dimensions
+    int newX = original.x + cropX;
+    int newY = original.y + cropY;
+    int newWidth = original.width - (2 * cropX);
+    int newHeight = original.height - (2 * cropY);
+    
+    // Ensure the cropped rectangle stays within image bounds
+    newX = std::max(0, std::min(newX, imageSize.width - 1));
+    newY = std::max(0, std::min(newY, imageSize.height - 1));
+    newWidth = std::max(1, std::min(newWidth, imageSize.width - newX));
+    newHeight = std::max(1, std::min(newHeight, imageSize.height - newY));
+    
+    return cv::Rect(newX, newY, newWidth, newHeight);
+}
+
+/**
  * Filter fragments from digit images using morphological operations.
  * Steps: Dilate → Find contours → Keep largest → Delete smaller → Erode
  * This removes small fragments while preserving the main digit structure.
@@ -466,8 +490,8 @@ void ImageProcessor::findCounterDigits() {
             int decimalsX = lastBox.x + lastBox.width + avgSpacing;
             int decimalsY = lastBox.y; // same Y as other digits
             
-            // Make decimal box 10% narrower to exclude the tenths scale on the right
-            int decimalsWidth = (int)(avgWidth * 0.90);
+            // Use 110% of average width for decimal box to ensure complete digit capture
+            int decimalsWidth = (int)(avgWidth * 1.10);
             int decimalsHeight = avgHeight;
             
             cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
@@ -526,9 +550,21 @@ void ImageProcessor::findCounterDigits() {
         
         cv::Rect finalRoi = roi;
         
-        // Crop digits if enabled in config (10% width, 3% height to remove frame edges)
+        // Crop digits if enabled in config
         if (_config.getCropDigits()) {
-            finalRoi = cropRectangle(roi, 0.1, img_ret.size());
+            // Special cropping for AOI (7th digit): 15% horizontal, 2% vertical
+            // AOI digit is the rightmost (last) digit when we have 7 digits total
+            bool isAOIDigit = (_config.getAreaOfInterest() && 
+                             alignedBoundingBoxes.size() == 7 && 
+                             i == alignedBoundingBoxes.size() - 1);
+            
+            if (isAOIDigit) {
+                // AOI-specific cropping: 15% horizontal instead of 10%
+                finalRoi = cropRectangleCustom(roi, 0.15, 0.02, img_ret.size());
+            } else {
+                // Standard cropping: 10% horizontal, 2% vertical
+                finalRoi = cropRectangle(roi, 0.1, img_ret.size());
+            }
         }
         
         // Extract digit image
@@ -556,7 +592,16 @@ void ImageProcessor::findCounterDigits() {
             params["width"] = std::to_string(finalRoi.width);
             params["height"] = std::to_string(finalRoi.height);
             if (_config.getCropDigits()) {
-                params["crop"] = "10pct_width_2pct_height";
+                // Check if this is AOI digit for debug output
+                bool isAOIDigit = (_config.getAreaOfInterest() && 
+                                 alignedBoundingBoxes.size() == 7 && 
+                                 i == alignedBoundingBoxes.size() - 1);
+                
+                if (isAOIDigit) {
+                    params["crop"] = "15pct_width_2pct_height_AOI";
+                } else {
+                    params["crop"] = "10pct_width_2pct_height";
+                }
                 params["filter"] = "fragments_removed_smart";
             } else {
                 params["crop"] = "none";
