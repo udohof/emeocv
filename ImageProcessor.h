@@ -42,6 +42,7 @@ private:
     void filterContours(std::vector<std::vector<cv::Point> >& contours, std::vector<cv::Rect>& boundingBoxes,
             std::vector<std::vector<cv::Point> >& filteredContours);
     cv::Rect cropRectangle(const cv::Rect& original, double cropPercent, const cv::Size& imageSize);
+    cv::Mat filterFragments(const cv::Mat& digitImage);
 
     cv::Mat _img;
     cv::Mat _imgGray;
