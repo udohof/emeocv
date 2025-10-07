@@ -285,7 +285,7 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     // Step 1: Dilate edges to merge nearby contours (digits and fragments)
     // Kernel size should be balanced: big enough to merge digit parts, 
     // small enough to keep digit and fragments separate
-    int kernelSize = std::max(2, std::min(digitImage.rows, digitImage.cols) / 15); // Dynamic kernel size
+    int kernelSize = std::max(3, std::min(digitImage.rows, digitImage.cols) / 10); // Stronger dilation for better merging
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
     cv::Mat dilated;
     cv::dilate(result, dilated, kernel);
