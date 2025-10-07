@@ -250,9 +250,9 @@ void ImageProcessor::filterContours(std::vector<std::vector<cv::Point> >& contou
  * This helps remove frame edges and borders from digit recognition.
  */
 cv::Rect ImageProcessor::cropRectangle(const cv::Rect& original, double cropPercent, const cv::Size& imageSize) {
-    // Different crop percentages: 10% horizontal (width), 3% vertical (height)
-    double cropPercentHorizontal = cropPercent;      // 10% for width
-    double cropPercentVertical = cropPercent * 0.3;  // 3% for height
+    // Different crop percentages: 10% horizontal (width), 2% vertical (height)
+    double cropPercentHorizontal = 0.1;  // 10% for width
+    double cropPercentVertical = cropPercentHorizontal * 0.2;  // 2% for height
     
     // Calculate crop amounts for each side
     int cropX = (int)(original.width * cropPercentHorizontal);
@@ -466,8 +466,8 @@ void ImageProcessor::findCounterDigits() {
             int decimalsX = lastBox.x + lastBox.width + avgSpacing;
             int decimalsY = lastBox.y; // same Y as other digits
             
-            // Make decimal box 25% narrower to exclude the tenths scale on the right
-            int decimalsWidth = (int)(avgWidth * 0.75);
+            // Make decimal box 10% narrower to exclude the tenths scale on the right
+            int decimalsWidth = (int)(avgWidth * 0.90);
             int decimalsHeight = avgHeight;
             
             cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
@@ -556,7 +556,7 @@ void ImageProcessor::findCounterDigits() {
             params["width"] = std::to_string(finalRoi.width);
             params["height"] = std::to_string(finalRoi.height);
             if (_config.getCropDigits()) {
-                params["crop"] = "10pct_width_3pct_height";
+                params["crop"] = "10pct_width_2pct_height";
                 params["filter"] = "fragments_removed_smart";
             } else {
                 params["crop"] = "none";
