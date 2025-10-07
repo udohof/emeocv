@@ -279,15 +279,20 @@ cv::Rect ImageProcessor::cropRectangle(const cv::Rect& original, double cropPerc
  * This removes small fragments while preserving the main digit structure.
  */
 cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
+    // Safety check: ensure we have a valid input image
+    if (digitImage.empty()) {
+        return digitImage.clone();
+    }
+    
     // Work with a copy of the input image
     cv::Mat result = digitImage.clone();
     
-    // Step 1: Dilate edges to merge nearby contours (digits and fragments)
-    // Kernel size should be balanced: big enough to merge digit parts, 
-    // small enough to keep digit and fragments separate
-    int kernelSize = std::max(3, std::min(digitImage.rows, digitImage.cols) / 10); // Stronger dilation for better merging
+    // Step 1: Light dilation to merge nearby edges (back to original approach)
+    // Use original conservative parameters to avoid over-dilation
+    int kernelSize = std::max(2, std::min(digitImage.rows, digitImage.cols) / 15); // Original size
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
     cv::Mat dilated;
+    // Single iteration to avoid excessive merging
     cv::dilate(result, dilated, kernel);
     
     // Step 2: Find contours in dilated image
@@ -300,19 +305,42 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     }
     
     if (contours.size() == 1) {
-        // Only one contour found, no fragments to remove
-        return result;
+        // Only one contour found - apply erosion to restore original thickness
+        cv::Mat singleContourResult;
+        cv::erode(dilated, singleContourResult, kernel);
+        return singleContourResult;
     }
     
-    // Step 3: Find the largest contour (assumed to be the main digit)
-    double maxArea = 0;
-    int maxAreaIdx = 0;
+    // Step 3: Intelligent contour analysis - handle similar-sized contours
+    std::vector<double> areas;
     for (size_t i = 0; i < contours.size(); i++) {
-        double area = cv::contourArea(contours[i]);
-        if (area > maxArea) {
-            maxArea = area;
+        areas.push_back(cv::contourArea(contours[i]));
+    }
+    
+    // Find largest and second largest areas
+    double maxArea = 0;
+    double secondMaxArea = 0;
+    int maxAreaIdx = 0;
+    
+    for (size_t i = 0; i < areas.size(); i++) {
+        if (areas[i] > maxArea) {
+            secondMaxArea = maxArea;
+            maxArea = areas[i];
             maxAreaIdx = i;
+        } else if (areas[i] > secondMaxArea) {
+            secondMaxArea = areas[i];
         }
+    }
+    
+    // Check if we have similarly sized contours (e.g., inner and outer ring of "0")
+    double sizeRatio = (maxArea > 0) ? (secondMaxArea / maxArea) : 0;
+    
+    if (sizeRatio > 0.4) {
+        // Similar sized contours found - likely digit with holes (0, 6, 8, 9)
+        // Keep all significant contours, just apply erosion to restore thickness
+        cv::Mat preservedResult;
+        cv::erode(dilated, preservedResult, kernel);
+        return preservedResult;
     }
     
     // Step 4: Create mask with only the largest contour
@@ -324,6 +352,7 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     dilated.copyTo(filteredDilated, mask);
     
     // Step 6: Erode the filtered result back to original thickness
+    // Single erosion to match single dilation
     cv::Mat finalResult;
     cv::erode(filteredDilated, finalResult, kernel);
     
@@ -528,7 +557,7 @@ void ImageProcessor::findCounterDigits() {
             params["height"] = std::to_string(finalRoi.height);
             if (_config.getCropDigits()) {
                 params["crop"] = "10pct_width_3pct_height";
-                params["filter"] = "fragments_removed";
+                params["filter"] = "fragments_removed_smart";
             } else {
                 params["crop"] = "none";
                 params["filter"] = "none";
