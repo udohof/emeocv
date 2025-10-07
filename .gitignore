@@ -3,11 +3,29 @@ Debug/*.o
 Debug/emeocv
 Debug/*.log
 Debug/config.yml
+Debug/trainctr.yml
 
 # Debug Ausgaben
 debug_output/
+Debug/debug_output/
 Debug/*.png
+Debug/imgdebug/
+Debug/Raw/
+
+# Konfigurationsdateien (werden zur Laufzeit erstellt)
+config.yml
+trainctr.yml
 
 # Weitere temporäre Dateien
 *.tmp
 *~
+*.swp
+*.swo
+
+# IDE/Editor Dateien
+.vscode/
+.idea/
+*.kate-swp
+
+# Log Dateien
+*.log
