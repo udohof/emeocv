@@ -44,6 +44,8 @@ private:
     cv::Rect cropRectangle(const cv::Rect& original, double cropPercent, const cv::Size& imageSize);
     cv::Rect cropRectangleCustom(const cv::Rect& original, double cropPercentHorizontal, double cropPercentVertical, const cv::Size& imageSize);
     cv::Mat filterFragments(const cv::Mat& digitImage);
+    void correctPerspective();
+    std::vector<cv::Point2f> detectMeterCorners();
 
     cv::Mat _img;
     cv::Mat _imgGray;
@@ -53,6 +55,11 @@ private:
     bool _debugSkew;
     bool _debugEdges;
     bool _debugDigits;
+    
+    // Perspective correction scaling factors
+    double _perspectiveScaleX = 1.0;
+    double _perspectiveScaleY = 1.0;
+    bool _perspectiveCorrectionApplied = false;
 };
 
 #endif /* IMAGEPROCESSOR_H_ */
