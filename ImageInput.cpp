@@ -189,22 +189,22 @@ bool CameraInput::nextImage() {
             cmd += " --timeout 3000"; // 3 Sekunden für HDR + Autofocus
             cmd += " --hdr auto";
             cmd += " --zsl"; // Zero Shutter Lag für bessere HDR-Ergebnisse
-            cmd += " --autofocus-on-capture 1"; // Fokus direkt vor Aufnahme
             // Keine explizite Auflösung im HDR-Modus setzen, um Verzerrungen zu vermeiden
             log4cpp::Category::getRoot() << log4cpp::Priority::INFO << "HDR mode enabled - using native resolution with extended autofocus";
         } else {
-            // Normale Aufnahme: Kurzes Timeout, explizite Auflösung
-            cmd += " --timeout 1000"; // 1 Sekunde für normale Aufnahme
+            // Normale Aufnahme: Längeres Timeout für besseren Autofocus, explizite Auflösung
+            cmd += " --timeout 2500"; // 2.5 Sekunden für besseren Autofocus
             cmd += " --width 640 --height 480";
         }
         
         // Gemeinsame Autofocus-Parameter für beide Modi
         cmd += " --autofocus-mode auto";
         cmd += " --autofocus-range normal";
-        cmd += " --autofocus-speed fast";
-        cmd += " --sharpness 1.5";
-        cmd += " --contrast 1.2";
-        cmd += " --quality 95";
+        cmd += " --autofocus-speed normal";  // Langsamerer, aber genauerer Fokus
+        cmd += " --autofocus-on-capture 1"; // Fokus direkt vor jeder Aufnahme
+        cmd += " --sharpness 1.8";          // Erhöhte Schärfe
+        cmd += " --contrast 1.3";           // Leicht erhöhter Kontrast
+        cmd += " --quality 98";
         
         cmd += " > /dev/null 2>&1";
         
