@@ -29,3 +29,6 @@ trainctr.yml
 
 # Log Dateien
 *.log
+
+# Gesammelte Trainingsbilder
+Debug/captured_images/
