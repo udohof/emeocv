@@ -161,6 +161,21 @@ public:
         _aoiMaxEdgeDensity = density;
     }
 
+    // Enclosed Area Detection parameters
+    bool getEnclosedAreaDetection() const {
+        return _enclosedAreaDetection;
+    }
+    void setEnclosedAreaDetection(bool enabled) {
+        _enclosedAreaDetection = enabled;
+    }
+
+    double getMinHoleAreaRatio() const {
+        return _minHoleAreaRatio;
+    }
+    void setMinHoleAreaRatio(double ratio) {
+        _minHoleAreaRatio = ratio;
+    }
+
 private:
     int _rotationDegrees;
     float _ocrMaxDist;
@@ -198,6 +213,10 @@ private:
     double _aoiWidthMultiplier = 1.20;         // Width multiplier for 7th digit prediction (120%)
     double _aoiMinEdgeDensity = 0.05;          // Minimum edge density for valid digit area (5%)
     double _aoiMaxEdgeDensity = 0.5;           // Maximum edge density for valid digit area (50%)
+    
+    // Enclosed Area Detection parameters
+    bool _enclosedAreaDetection = true;        // Enable/disable enclosed area detection (default: enabled)
+    double _minHoleAreaRatio = 0.02;           // Minimum hole area as ratio of parent contour (2%)
 };
 
 #endif /* CONFIG_H_ */

@@ -371,37 +371,42 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
         return singleContourResult;
     }
     
-    // Step 3: Enhanced contour analysis with enclosed area detection
+    // Step 3: Enhanced contour analysis with enclosed area detection (configurable)
     std::vector<double> areas;
     std::vector<bool> hasEnclosedAreas;
     
     for (size_t i = 0; i < contours.size(); i++) {
         areas.push_back(cv::contourArea(contours[i]));
         
-        // Check if this contour has enclosed areas (holes) after dilation
-        cv::Mat contourMask = cv::Mat::zeros(dilated.size(), CV_8UC1);
-        cv::drawContours(contourMask, contours, i, cv::Scalar(255), cv::FILLED);
-        
-        // Find inner contours (holes) within this filled contour
-        std::vector<std::vector<cv::Point>> innerContours;
-        std::vector<cv::Vec4i> innerHierarchy;
-        cv::findContours(contourMask, innerContours, innerHierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
-        
-        // Count significant holes - adapted for all digit types
-        int significantHoles = 0;
-        double minHoleArea = areas[i] * 0.02; // Reduced to 2% - detect smaller enclosed areas
-        
-        for (size_t j = 0; j < innerContours.size(); j++) {
-            // Check if this is a hole (has parent in hierarchy)
-            if (innerHierarchy[j][3] != -1) { // Has parent = is a hole
-                double holeArea = cv::contourArea(innerContours[j]);
-                if (holeArea > minHoleArea) {
-                    significantHoles++;
+        if (_config.getEnclosedAreaDetection()) {
+            // Check if this contour has enclosed areas (holes) after dilation
+            cv::Mat contourMask = cv::Mat::zeros(dilated.size(), CV_8UC1);
+            cv::drawContours(contourMask, contours, i, cv::Scalar(255), cv::FILLED);
+            
+            // Find inner contours (holes) within this filled contour
+            std::vector<std::vector<cv::Point>> innerContours;
+            std::vector<cv::Vec4i> innerHierarchy;
+            cv::findContours(contourMask, innerContours, innerHierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+            
+            // Count significant holes - using configurable minimum hole area ratio
+            int significantHoles = 0;
+            double minHoleArea = areas[i] * _config.getMinHoleAreaRatio();
+            
+            for (size_t j = 0; j < innerContours.size(); j++) {
+                // Check if this is a hole (has parent in hierarchy)
+                if (innerHierarchy[j][3] != -1) { // Has parent = is a hole
+                    double holeArea = cv::contourArea(innerContours[j]);
+                    if (holeArea > minHoleArea) {
+                        significantHoles++;
+                    }
                 }
             }
+            
+            hasEnclosedAreas.push_back(significantHoles > 0);
+        } else {
+            // Enclosed area detection disabled - assume no enclosed areas
+            hasEnclosedAreas.push_back(false);
         }
-        
-        hasEnclosedAreas.push_back(significantHoles > 0);
     }
     
     // Find largest and second largest areas
@@ -422,25 +427,33 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     // Step 4: Advanced fragment filtering with enclosed area analysis
     double sizeRatio = (maxArea > 0) ? (secondMaxArea / maxArea) : 0;
     
-    // Filter out contours without enclosed areas (likely fragments)
+    // Filter contours based on enclosed area detection (if enabled) or size-based fallback
     std::vector<int> validContourIndices;
-    for (size_t i = 0; i < contours.size(); i++) {
-        double areaRatio = areas[i] / maxArea;
-        
-        // Balanced approach: Prefer enclosed areas but allow fallbacks for edge cases
-        // - Primary rule: Contours with enclosed areas are likely valid digits
-        // - Fallback rule: Large contours (>40%) might be damaged digits (e.g., broken "0")
-        // - Reject rule: Small contours without structure are definitely fragments
-        
-        if (hasEnclosedAreas[i]) {
-            // Contour has enclosed areas - definitely a valid digit
-            validContourIndices.push_back(i);
-        } else if (areaRatio > _config.getMorphSizeRatioThreshold()) {
-            // Large contour without holes - might be damaged digit (broken "0", "6", etc.)
-            // Keep as fallback to avoid losing valid digits due to poor image quality
-            validContourIndices.push_back(i);
+    
+    if (_config.getEnclosedAreaDetection()) {
+        // Advanced filtering using enclosed area analysis
+        for (size_t i = 0; i < contours.size(); i++) {
+            double areaRatio = areas[i] / maxArea;
+            
+            // Balanced approach: Prefer enclosed areas but allow fallbacks for edge cases
+            // - Primary rule: Contours with enclosed areas are likely valid digits
+            // - Fallback rule: Large contours might be damaged digits (e.g., broken "0")
+            // - Reject rule: Small contours without structure are definitely fragments
+            
+            if (hasEnclosedAreas[i]) {
+                // Contour has enclosed areas - definitely a valid digit
+                validContourIndices.push_back(i);
+            } else if (areaRatio > _config.getMorphSizeRatioThreshold()) {
+                // Large contour without holes - might be damaged digit (broken "0", "6", etc.)
+                // Keep as fallback to avoid losing valid digits due to poor image quality
+                validContourIndices.push_back(i);
+            }
+            // Small contours without enclosed areas are fragments - reject them
         }
-        // Small contours (<40%) without enclosed areas are fragments - reject them
+    } else {
+        // Fallback: Simple size-based filtering (original Smart Fragment Filtering)
+        // Keep only largest contour when enclosed area detection is disabled
+        validContourIndices.push_back(maxAreaIdx);
     }
     
     // If no valid contours found, fall back to largest contour
@@ -657,7 +670,7 @@ void ImageProcessor::findCounterDigits() {
                                              _config.getCropPercentVerticalAOI(), img_ret.size());
             } else {
                 // Standard cropping using configurable parameters
-                finalRoi = cropRectangle(roi, 0.1, img_ret.size());
+                finalRoi = cropRectangle(roi, 0.0, img_ret.size()); // Parameter wird in Funktion ignoriert
             }
         }
         

@@ -41,6 +41,8 @@ void Config::saveConfig() {
     fs << "aoiWidthMultiplier" << _aoiWidthMultiplier;
     fs << "aoiMinEdgeDensity" << _aoiMinEdgeDensity;
     fs << "aoiMaxEdgeDensity" << _aoiMaxEdgeDensity;
+    fs << "enclosedAreaDetection" << _enclosedAreaDetection;
+    fs << "minHoleAreaRatio" << _minHoleAreaRatio;
     fs.release();
 }
 
@@ -73,6 +75,8 @@ void Config::loadConfig() {
         if (!fs["aoiWidthMultiplier"].empty()) fs["aoiWidthMultiplier"] >> _aoiWidthMultiplier;
         if (!fs["aoiMinEdgeDensity"].empty()) fs["aoiMinEdgeDensity"] >> _aoiMinEdgeDensity;
         if (!fs["aoiMaxEdgeDensity"].empty()) fs["aoiMaxEdgeDensity"] >> _aoiMaxEdgeDensity;
+        if (!fs["enclosedAreaDetection"].empty()) fs["enclosedAreaDetection"] >> _enclosedAreaDetection;
+        if (!fs["minHoleAreaRatio"].empty()) fs["minHoleAreaRatio"] >> _minHoleAreaRatio;
         fs.release();
     } else {
         // no config file - create an initial one with default values
