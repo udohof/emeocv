@@ -124,6 +124,21 @@ public:
         _smartSizeTolerance = tolerance;
     }
 
+    // Contour filtering parameters for -C option
+    int getDigitMinWidth() const {
+        return _digitMinWidth;
+    }
+    void setDigitMinWidth(int width) {
+        _digitMinWidth = width;
+    }
+
+    double getPerspectiveHeightTolerance() const {
+        return _perspectiveHeightTolerance;
+    }
+    void setPerspectiveHeightTolerance(double tolerance) {
+        _perspectiveHeightTolerance = tolerance;
+    }
+
     // AOI (Area of Interest) parameters for -A option
     double getAoiWidthMultiplier() const {
         return _aoiWidthMultiplier;
@@ -174,6 +189,10 @@ private:
     // Smart fragment filtering parameters for -C option
     double _smartSpacingTolerance = 0.5;       // Spacing variance tolerance (50% of average spacing)
     double _smartSizeTolerance = 0.3;          // Size variance tolerance (30% of average width/height)
+    
+    // Contour filtering parameters for -C option
+    int _digitMinWidth = 5;                    // Minimum width for valid digit contours (default 5px)
+    double _perspectiveHeightTolerance = 1.3;  // Additional height tolerance for perspective correction (130%)
     
     // AOI (Area of Interest) parameters for -A option  
     double _aoiWidthMultiplier = 1.20;         // Width multiplier for 7th digit prediction (120%)

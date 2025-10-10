@@ -256,19 +256,19 @@ void ImageProcessor::filterContours(std::vector<std::vector<cv::Point> >& contou
     // Calculate scaled parameters based on perspective correction
     int scaledMinHeight = _config.getDigitMinHeight();
     int scaledMaxHeight = _config.getDigitMaxHeight();
-    int scaledMinWidth = 5;
+    int scaledMinWidth = _config.getDigitMinWidth();
     
     if (_perspectiveCorrectionApplied) {
         scaledMinHeight = (int)(_config.getDigitMinHeight() * _perspectiveScaleY);
-        // More generous maximum height to accommodate perspective distortion
-        scaledMaxHeight = (int)(_config.getDigitMaxHeight() * _perspectiveScaleY * 1.3); // 30% more tolerance
-        scaledMinWidth = (int)(5 * _perspectiveScaleX);
+        // More generous maximum height to accommodate perspective distortion using configurable tolerance
+        scaledMaxHeight = (int)(_config.getDigitMaxHeight() * _perspectiveScaleY * _config.getPerspectiveHeightTolerance());
+        scaledMinWidth = (int)(_config.getDigitMinWidth() * _perspectiveScaleX);
         
         log4cpp::Category& rlog = log4cpp::Category::getRoot();
         rlog << log4cpp::Priority::INFO << "Using scaled parameters for digit detection: minHeight=" 
              << scaledMinHeight << " (was " << _config.getDigitMinHeight() << "), maxHeight=" 
              << scaledMaxHeight << " (was " << _config.getDigitMaxHeight() << "), minWidth=" 
-             << scaledMinWidth << " (was 5), Y-scale=" << _perspectiveScaleY;
+             << scaledMinWidth << " (was " << _config.getDigitMinWidth() << "), Y-scale=" << _perspectiveScaleY;
     }
     
     // filter contours by bounding rect size

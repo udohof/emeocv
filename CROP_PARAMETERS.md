@@ -167,6 +167,77 @@ morphSizeRatioThreshold: 0.3      # Weniger tolerant bei ähnlichen Konturen
 - **morphIterations**: 1-3 (Standard: 1)
 - **morphSizeRatioThreshold**: 0.2-0.6 (Standard: 0.4)
 
+## Kontur-Filter Parameter (-C Option)
+
+Die Kontur-Filterung verwendet zusätzliche Parameter zur Qualitätssicherung:
+
+### Verfügbare Parameter
+
+#### digitMinWidth
+- **Standard**: `5` (Pixel)
+- **Beschreibung**: Minimale Breite für gültige Ziffern-Konturen
+- **Zweck**: Filtert sehr schmale Konturen aus (Rauschen, Artefakte)
+- **Empfohlener Bereich**: 3-10 Pixel
+- **Skalierung**: Wird automatisch mit Perspektivenkorrektur skaliert
+
+```yaml
+digitMinWidth: 5              # Schmalere Konturen werden verworfen
+```
+
+#### perspectiveHeightTolerance
+- **Standard**: `1.3` (Multiplikator)
+- **Beschreibung**: Höhen-Toleranz für Ziffern-Konturen relativ zur Breite
+- **Zweck**: Verhindert zu hohe/schmale Konturen (z.B. Striche, Linien)
+- **Empfohlener Bereich**: 1.2-1.5
+- **Berechnung**: `maxHöhe = Breite × perspectiveHeightTolerance`
+
+```yaml
+perspectiveHeightTolerance: 1.3    # Ziffern dürfen max. 1.3x breiter als hoch sein
+```
+
+### Funktionsweise
+
+Die Kontur-Filterung erfolgt in `filterContours()` und prüft:
+
+1. **Mindestbreite**: `contour.width > digitMinWidth * perspectiveScale`
+2. **Höhen-Verhältnis**: `contour.height < contour.width * perspectiveHeightTolerance`
+3. **Standard-Größen**: Zusätzlich digitMinHeight/MaxHeight Prüfungen
+
+### Anwendungsbeispiele
+
+**Konservative Filterung** (mehr Konturen akzeptieren):
+```yaml
+digitMinWidth: 3
+perspectiveHeightTolerance: 1.5
+```
+
+**Strenge Filterung** (nur eindeutige Ziffern):
+```yaml
+digitMinWidth: 7
+perspectiveHeightTolerance: 1.2
+```
+
+**Standard-Empfehlung** (ausgewogene Filterung):
+```yaml
+digitMinWidth: 5
+perspectiveHeightTolerance: 1.3
+```
+
+### Integration mit Perspektivenkorrektur
+
+- **Automatische Skalierung**: `digitMinWidth` wird mit `perspectiveScaleX` multipliziert
+- **Adaptive Toleranz**: Berücksichtigt Bildverzerrung durch Kamerawinkel
+- **Robuste Erkennung**: Funktioniert auch bei schrägen Aufnahmen
+
+### Troubleshooting
+
+| Problem | Lösung |
+|---------|--------|
+| Zu viele falsche Erkennungen | `digitMinWidth` erhöhen, `perspectiveHeightTolerance` senken |
+| Ziffern werden nicht erkannt | `digitMinWidth` senken, `perspectiveHeightTolerance` erhöhen |
+| Vertikale Linien stören | `perspectiveHeightTolerance` auf 1.2 senken |
+| Schmale Ziffern (1, I) fehlen | `digitMinWidth` auf 3 senken |
+
 ## Debug Ausgabe
 
 Mit `-d` Option werden die angewandten Parameter in den Debug-Dateien dokumentiert:

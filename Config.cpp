@@ -36,6 +36,8 @@ void Config::saveConfig() {
     fs << "morphSizeRatioThreshold" << _morphSizeRatioThreshold;
     fs << "smartSpacingTolerance" << _smartSpacingTolerance;
     fs << "smartSizeTolerance" << _smartSizeTolerance;
+    fs << "digitMinWidth" << _digitMinWidth;
+    fs << "perspectiveHeightTolerance" << _perspectiveHeightTolerance;
     fs << "aoiWidthMultiplier" << _aoiWidthMultiplier;
     fs << "aoiMinEdgeDensity" << _aoiMinEdgeDensity;
     fs << "aoiMaxEdgeDensity" << _aoiMaxEdgeDensity;
@@ -66,6 +68,8 @@ void Config::loadConfig() {
         if (!fs["morphSizeRatioThreshold"].empty()) fs["morphSizeRatioThreshold"] >> _morphSizeRatioThreshold;
         if (!fs["smartSpacingTolerance"].empty()) fs["smartSpacingTolerance"] >> _smartSpacingTolerance;
         if (!fs["smartSizeTolerance"].empty()) fs["smartSizeTolerance"] >> _smartSizeTolerance;
+        if (!fs["digitMinWidth"].empty()) fs["digitMinWidth"] >> _digitMinWidth;
+        if (!fs["perspectiveHeightTolerance"].empty()) fs["perspectiveHeightTolerance"] >> _perspectiveHeightTolerance;
         if (!fs["aoiWidthMultiplier"].empty()) fs["aoiWidthMultiplier"] >> _aoiWidthMultiplier;
         if (!fs["aoiMinEdgeDensity"].empty()) fs["aoiMinEdgeDensity"] >> _aoiMinEdgeDensity;
         if (!fs["aoiMaxEdgeDensity"].empty()) fs["aoiMaxEdgeDensity"] >> _aoiMaxEdgeDensity;
