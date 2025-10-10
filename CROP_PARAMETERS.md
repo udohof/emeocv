@@ -48,8 +48,45 @@ config.saveConfig();
 - **AOI Horizontal**: 0.10 - 0.20 (10% - 20%)
 - **AOI Vertikal**: 0.01 - 0.05 (1% - 5%)
 
+## Morphologische Filter-Parameter
+
+Die Option `-C` verwendet auch konfigurierbare morphologische Operationen zur Fragment-Filterung:
+
+### Verfügbare Parameter
+
+- **morphKernelSizeDivisor**: Teiler für Kernel-Größe (Standard: 15)
+  - Kernel-Größe = min(Bildbreite, Bildhöhe) / morphKernelSizeDivisor
+  - Kleinere Werte = größere Kernel = stärkere Verbindung von Kanten
+  
+- **morphIterations**: Anzahl Dilatation/Erosion Iterationen (Standard: 1) 
+  - Höhere Werte = stärkere morphologische Effekte
+  
+- **morphSizeRatioThreshold**: Schwellwert für ähnlich große Konturen (Standard: 0.4)
+  - Verhältnis zweitgrößte/größte Kontur für Ziffern mit Löchern (0, 6, 8, 9)
+
+### Funktionsweise
+
+1. **Dilatation**: Verdickt Kanten um nahe Fragmente zu verbinden
+2. **Konturenanalyse**: Findet alle verbundenen Komponenten  
+3. **Intelligente Filterung**: Behält Hauptstruktur, entfernt kleine Fragmente
+4. **Erosion**: Stellt ursprüngliche Kantenstärke wieder her
+
+### Konfiguration in config.yml
+```yaml
+morphKernelSizeDivisor: 12        # Größere Kernel (weniger konservativ)
+morphIterations: 2                # Stärkere morphologische Effekte  
+morphSizeRatioThreshold: 0.3      # Weniger tolerant bei ähnlichen Konturen
+```
+
+### Empfohlene Werte
+
+- **morphKernelSizeDivisor**: 10-20 (Standard: 15)
+- **morphIterations**: 1-3 (Standard: 1)
+- **morphSizeRatioThreshold**: 0.2-0.6 (Standard: 0.4)
+
 ## Debug Ausgabe
 
-Mit `-d` Option werden die angewandten Crop-Parameter in den Debug-Dateien dokumentiert:
+Mit `-d` Option werden die angewandten Parameter in den Debug-Dateien dokumentiert:
 - `ImageProcessor_digit_X_crop=Xpct_width_Xpct_height`
 - `ImageProcessor_digit_X_crop=Xpct_width_Xpct_height_AOI` (für AOI-Ziffer)
+- `ImageProcessor_digit_X_filter=fragments_removed_smart` (nach morphologischer Filterung)

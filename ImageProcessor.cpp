@@ -348,13 +348,12 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     // Work with a copy of the input image
     cv::Mat result = digitImage.clone();
     
-    // Step 1: Light dilation to merge nearby edges (back to original approach)
-    // Use original conservative parameters to avoid over-dilation
-    int kernelSize = std::max(2, std::min(digitImage.rows, digitImage.cols) / 15); // Original size
+    // Step 1: Light dilation to merge nearby edges using configurable parameters
+    int kernelSize = std::max(2, std::min(digitImage.rows, digitImage.cols) / _config.getMorphKernelSizeDivisor());
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
     cv::Mat dilated;
-    // Single iteration to avoid excessive merging
-    cv::dilate(result, dilated, kernel);
+    // Use configurable iterations for dilation
+    cv::dilate(result, dilated, kernel, cv::Point(-1,-1), _config.getMorphIterations());
     
     // Step 2: Find contours in dilated image
     std::vector<std::vector<cv::Point>> contours;
@@ -368,7 +367,7 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     if (contours.size() == 1) {
         // Only one contour found - apply erosion to restore original thickness
         cv::Mat singleContourResult;
-        cv::erode(dilated, singleContourResult, kernel);
+        cv::erode(dilated, singleContourResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
         return singleContourResult;
     }
     
@@ -396,11 +395,11 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     // Check if we have similarly sized contours (e.g., inner and outer ring of "0")
     double sizeRatio = (maxArea > 0) ? (secondMaxArea / maxArea) : 0;
     
-    if (sizeRatio > 0.4) {
+    if (sizeRatio > _config.getMorphSizeRatioThreshold()) {
         // Similar sized contours found - likely digit with holes (0, 6, 8, 9)
         // Keep all significant contours, just apply erosion to restore thickness
         cv::Mat preservedResult;
-        cv::erode(dilated, preservedResult, kernel);
+        cv::erode(dilated, preservedResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
         return preservedResult;
     }
     
@@ -413,9 +412,9 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     dilated.copyTo(filteredDilated, mask);
     
     // Step 6: Erode the filtered result back to original thickness
-    // Single erosion to match single dilation
+    // Use same number of iterations as dilation to maintain balance
     cv::Mat finalResult;
-    cv::erode(filteredDilated, finalResult, kernel);
+    cv::erode(filteredDilated, finalResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
     
     return finalResult;
 }

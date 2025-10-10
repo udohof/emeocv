@@ -31,6 +31,9 @@ void Config::saveConfig() {
     fs << "cropPercentVertical" << _cropPercentVertical;
     fs << "cropPercentHorizontalAOI" << _cropPercentHorizontalAOI;
     fs << "cropPercentVerticalAOI" << _cropPercentVerticalAOI;
+    fs << "morphKernelSizeDivisor" << _morphKernelSizeDivisor;
+    fs << "morphIterations" << _morphIterations;
+    fs << "morphSizeRatioThreshold" << _morphSizeRatioThreshold;
     fs.release();
 }
 
@@ -53,6 +56,9 @@ void Config::loadConfig() {
         if (!fs["cropPercentVertical"].empty()) fs["cropPercentVertical"] >> _cropPercentVertical;
         if (!fs["cropPercentHorizontalAOI"].empty()) fs["cropPercentHorizontalAOI"] >> _cropPercentHorizontalAOI;
         if (!fs["cropPercentVerticalAOI"].empty()) fs["cropPercentVerticalAOI"] >> _cropPercentVerticalAOI;
+        if (!fs["morphKernelSizeDivisor"].empty()) fs["morphKernelSizeDivisor"] >> _morphKernelSizeDivisor;
+        if (!fs["morphIterations"].empty()) fs["morphIterations"] >> _morphIterations;
+        if (!fs["morphSizeRatioThreshold"].empty()) fs["morphSizeRatioThreshold"] >> _morphSizeRatioThreshold;
         fs.release();
     } else {
         // no config file - create an initial one with default values

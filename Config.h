@@ -87,6 +87,28 @@ public:
         _cropPercentVerticalAOI = percent;
     }
 
+    // Morphological operation parameters for fragment filtering
+    int getMorphKernelSizeDivisor() const {
+        return _morphKernelSizeDivisor;
+    }
+    void setMorphKernelSizeDivisor(int divisor) {
+        _morphKernelSizeDivisor = divisor;
+    }
+
+    int getMorphIterations() const {
+        return _morphIterations;
+    }
+    void setMorphIterations(int iterations) {
+        _morphIterations = iterations;
+    }
+
+    double getMorphSizeRatioThreshold() const {
+        return _morphSizeRatioThreshold;
+    }
+    void setMorphSizeRatioThreshold(double threshold) {
+        _morphSizeRatioThreshold = threshold;
+    }
+
 private:
     int _rotationDegrees;
     float _ocrMaxDist;
@@ -106,6 +128,11 @@ private:
     double _cropPercentVertical = 0.02;       // 2% standard vertical crop
     double _cropPercentHorizontalAOI = 0.15;  // 15% AOI digit horizontal crop
     double _cropPercentVerticalAOI = 0.02;    // 2% AOI digit vertical crop
+    
+    // Morphological operation parameters for fragment filtering
+    int _morphKernelSizeDivisor = 15;          // Kernel size = min(width,height) / divisor (default 15)
+    int _morphIterations = 1;                  // Number of dilation/erosion iterations (default 1)
+    double _morphSizeRatioThreshold = 0.4;     // Threshold for similar-sized contours (default 0.4)
 };
 
 #endif /* CONFIG_H_ */
