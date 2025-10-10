@@ -109,6 +109,43 @@ public:
         _morphSizeRatioThreshold = threshold;
     }
 
+    // Smart fragment filtering parameters for -C option
+    double getSmartSpacingTolerance() const {
+        return _smartSpacingTolerance;
+    }
+    void setSmartSpacingTolerance(double tolerance) {
+        _smartSpacingTolerance = tolerance;
+    }
+
+    double getSmartSizeTolerance() const {
+        return _smartSizeTolerance;
+    }
+    void setSmartSizeTolerance(double tolerance) {
+        _smartSizeTolerance = tolerance;
+    }
+
+    // AOI (Area of Interest) parameters for -A option
+    double getAoiWidthMultiplier() const {
+        return _aoiWidthMultiplier;
+    }
+    void setAoiWidthMultiplier(double multiplier) {
+        _aoiWidthMultiplier = multiplier;
+    }
+
+    double getAoiMinEdgeDensity() const {
+        return _aoiMinEdgeDensity;
+    }
+    void setAoiMinEdgeDensity(double density) {
+        _aoiMinEdgeDensity = density;
+    }
+
+    double getAoiMaxEdgeDensity() const {
+        return _aoiMaxEdgeDensity;
+    }
+    void setAoiMaxEdgeDensity(double density) {
+        _aoiMaxEdgeDensity = density;
+    }
+
 private:
     int _rotationDegrees;
     float _ocrMaxDist;
@@ -133,6 +170,15 @@ private:
     int _morphKernelSizeDivisor = 15;          // Kernel size = min(width,height) / divisor (default 15)
     int _morphIterations = 1;                  // Number of dilation/erosion iterations (default 1)
     double _morphSizeRatioThreshold = 0.4;     // Threshold for similar-sized contours (default 0.4)
+    
+    // Smart fragment filtering parameters for -C option
+    double _smartSpacingTolerance = 0.5;       // Spacing variance tolerance (50% of average spacing)
+    double _smartSizeTolerance = 0.3;          // Size variance tolerance (30% of average width/height)
+    
+    // AOI (Area of Interest) parameters for -A option  
+    double _aoiWidthMultiplier = 1.20;         // Width multiplier for 7th digit prediction (120%)
+    double _aoiMinEdgeDensity = 0.05;          // Minimum edge density for valid digit area (5%)
+    double _aoiMaxEdgeDensity = 0.5;           // Maximum edge density for valid digit area (50%)
 };
 
 #endif /* CONFIG_H_ */

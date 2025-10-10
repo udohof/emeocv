@@ -1,6 +1,89 @@
 # Konfigurierbare Crop-Parameter
 
-Die Option `-C` (Digit Cropping) verwendet jetzt konfigurierbare Parameter aus der `config.yml`:
+Die Option `-C` (Digit Cropping) verwendet jetzt kon## Smart Fragment Filtering Parameter (-C Option)
+
+Die Smart Fragment Filtering Funktion verwendet intelligente Algorithmen zur Erkennung regulärer Ziffern-Muster:
+
+### Verfügbare Parameter
+
+#### Spacing-Analyse
+- **smartSpacingTolerance**: Toleranz für Abstands-Varianz (Standard: 0.5 = 50%)
+  - Bestimmt wie ähnlich die Abstände zwischen Ziffern sein müssen
+  - Niedrigere Werte = strengere Anforderungen an regelmäßige Abstände
+
+#### Größen-Analyse  
+- **smartSizeTolerance**: Toleranz für Größen-Varianz (Standard: 0.3 = 30%)
+  - Bestimmt wie ähnlich Breite und Höhe der Ziffern sein müssen
+  - Niedrigere Werte = strengere Anforderungen an einheitliche Größen
+
+### Funktionsweise der Smart Fragment Filtering
+
+1. **Spacing-Prüfung**: Analysiert Abstände zwischen erkannten Ziffern
+2. **Größen-Prüfung**: Vergleicht Breite und Höhe aller Ziffern  
+3. **Regularität**: Nur bei regelmäßigen Mustern wird AOI-Vorhersage aktiviert
+4. **Robustheit**: Filtert falsche Positive bei unregelmäßigen Zählwerken
+
+## Area of Interest (AOI) Parameter (-A Option)
+
+Die AOI-Funktion sagt die Position der 7. Ziffer (Dezimalstelle) vorher:
+
+### Verfügbare Parameter
+
+#### Geometrie-Parameter
+- **aoiWidthMultiplier**: Breiten-Multiplikator für 7. Ziffer (Standard: 1.2 = 120%)
+  - Bestimmt die Breite des vorhergesagten Bereichs relativ zur durchschnittlichen Ziffernbreite
+  
+#### Edge-Density-Parameter  
+- **aoiMinEdgeDensity**: Minimale Kanten-Dichte für gültige Ziffer (Standard: 0.05 = 5%)
+- **aoiMaxEdgeDensity**: Maximale Kanten-Dichte für gültige Ziffer (Standard: 0.5 = 50%)
+  - Bestimmt den Bereich gültiger Kantenanteile im vorhergesagten Bereich
+
+### Funktionsweise der AOI-Vorhersage
+
+1. **Voraussetzung**: Smart Fragment Filtering muss Regularität bestätigen
+2. **Positionsberechnung**: 7. Ziffer nach durchschnittlichem Abstand platziert
+3. **Größenberechnung**: Breite mit `aoiWidthMultiplier` skaliert
+4. **Validierung**: Edge-Density muss im konfigurierten Bereich liegen
+5. **Integration**: Gültige AOI-Ziffer wird zu den erkannten Ziffern hinzugefügt
+
+## Konfigurationsbeispiele
+
+### Konservative Einstellungen (hohe Präzision)
+```yaml
+smartSpacingTolerance: 0.3        # Strengere Abstands-Anforderungen
+smartSizeTolerance: 0.2           # Strengere Größen-Anforderungen
+aoiWidthMultiplier: 1.1           # Schmalere AOI-Box
+aoiMinEdgeDensity: 0.08           # Höhere Mindest-Kantendichte
+aoiMaxEdgeDensity: 0.4            # Niedrigere Max-Kantendichte
+```
+
+### Permissive Einstellungen (höhere Erkennungsrate)
+```yaml
+smartSpacingTolerance: 0.7        # Tolerantere Abstands-Anforderungen  
+smartSizeTolerance: 0.4           # Tolerantere Größen-Anforderungen
+aoiWidthMultiplier: 1.3           # Breitere AOI-Box
+aoiMinEdgeDensity: 0.03           # Niedrigere Mindest-Kantendichte
+aoiMaxEdgeDensity: 0.6            # Höhere Max-Kantendichte
+```
+
+### Empfohlene Bereiche
+
+- **smartSpacingTolerance**: 0.2 - 0.8 (Standard: 0.5)
+- **smartSizeTolerance**: 0.1 - 0.5 (Standard: 0.3)
+- **aoiWidthMultiplier**: 1.0 - 1.5 (Standard: 1.2)
+- **aoiMinEdgeDensity**: 0.01 - 0.1 (Standard: 0.05)
+- **aoiMaxEdgeDensity**: 0.3 - 0.7 (Standard: 0.5)
+
+## Debug Ausgabe
+
+Mit `-d` Option werden die angewandten Parameter in den Debug-Dateien dokumentiert:
+- `ImageProcessor_digit_X_crop=Xpct_width_Xpct_height`
+- `ImageProcessor_digit_X_crop=Xpct_width_Xpct_height_AOI` (für AOI-Ziffer)
+
+### Log-Ausgaben für Smart Fragment & AOI
+- Spacing/Size regularity analysis results  
+- AOI prediction calculations with edge density
+- Parameter values used for validationierbare Parameter aus der `config.yml`:
 
 ## Verfügbare Parameter
 

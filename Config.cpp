@@ -34,6 +34,11 @@ void Config::saveConfig() {
     fs << "morphKernelSizeDivisor" << _morphKernelSizeDivisor;
     fs << "morphIterations" << _morphIterations;
     fs << "morphSizeRatioThreshold" << _morphSizeRatioThreshold;
+    fs << "smartSpacingTolerance" << _smartSpacingTolerance;
+    fs << "smartSizeTolerance" << _smartSizeTolerance;
+    fs << "aoiWidthMultiplier" << _aoiWidthMultiplier;
+    fs << "aoiMinEdgeDensity" << _aoiMinEdgeDensity;
+    fs << "aoiMaxEdgeDensity" << _aoiMaxEdgeDensity;
     fs.release();
 }
 
@@ -59,6 +64,11 @@ void Config::loadConfig() {
         if (!fs["morphKernelSizeDivisor"].empty()) fs["morphKernelSizeDivisor"] >> _morphKernelSizeDivisor;
         if (!fs["morphIterations"].empty()) fs["morphIterations"] >> _morphIterations;
         if (!fs["morphSizeRatioThreshold"].empty()) fs["morphSizeRatioThreshold"] >> _morphSizeRatioThreshold;
+        if (!fs["smartSpacingTolerance"].empty()) fs["smartSpacingTolerance"] >> _smartSpacingTolerance;
+        if (!fs["smartSizeTolerance"].empty()) fs["smartSizeTolerance"] >> _smartSizeTolerance;
+        if (!fs["aoiWidthMultiplier"].empty()) fs["aoiWidthMultiplier"] >> _aoiWidthMultiplier;
+        if (!fs["aoiMinEdgeDensity"].empty()) fs["aoiMinEdgeDensity"] >> _aoiMinEdgeDensity;
+        if (!fs["aoiMaxEdgeDensity"].empty()) fs["aoiMaxEdgeDensity"] >> _aoiMaxEdgeDensity;
         fs.release();
     } else {
         // no config file - create an initial one with default values

@@ -498,18 +498,18 @@ void ImageProcessor::findCounterDigits() {
         
         rlog << log4cpp::Priority::INFO << "Average spacing: " << avgSpacing << ", width: " << avgWidth << ", height: " << avgHeight;
         
-        // Check regularity (spacing variance < 50% of average)
+        // Check regularity using configurable spacing tolerance
         for (int s : spacings) {
-            if (abs(s - avgSpacing) > avgSpacing * 0.5) {
+            if (abs(s - avgSpacing) > avgSpacing * _config.getSmartSpacingTolerance()) {
                 regularSpacing = false;
                 break;
             }
         }
         
-        // Check size similarity (width/height variance < 30% of average)
+        // Check size similarity using configurable size tolerance
         for (size_t i = 0; i < widths.size(); i++) {
-            if (abs(widths[i] - avgWidth) > avgWidth * 0.3 || 
-                abs(heights[i] - avgHeight) > avgHeight * 0.3) {
+            if (abs(widths[i] - avgWidth) > avgWidth * _config.getSmartSizeTolerance() || 
+                abs(heights[i] - avgHeight) > avgHeight * _config.getSmartSizeTolerance()) {
                 similarSizes = false;
                 break;
             }
@@ -526,8 +526,8 @@ void ImageProcessor::findCounterDigits() {
             int decimalsX = lastBox.x + lastBox.width + avgSpacing;
             int decimalsY = lastBox.y; // same Y as other digits
             
-            // Use 120% of average width for decimal box to ensure complete digit capture
-            int decimalsWidth = (int)(avgWidth * 1.20);
+            // Use configurable width multiplier for decimal box to ensure complete digit capture
+            int decimalsWidth = (int)(avgWidth * _config.getAoiWidthMultiplier());
             int decimalsHeight = avgHeight;
             
             cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
@@ -551,15 +551,16 @@ void ImageProcessor::findCounterDigits() {
                 rlog << log4cpp::Priority::INFO << "Decimal area edge density: " << edgeDensity 
                      << " (pixels: " << edgePixels << "/" << (decimalsWidth * decimalsHeight) << ")";
                 
-                // If edge density is reasonable (between 5% and 50%), add as 7th digit
-                if (edgeDensity >= 0.05 && edgeDensity <= 0.5) {
+                // If edge density is reasonable using configurable thresholds, add as 7th digit
+                if (edgeDensity >= _config.getAoiMinEdgeDensity() && edgeDensity <= _config.getAoiMaxEdgeDensity()) {
                     alignedBoundingBoxes.push_back(predictedDecimalBox);
                     rlog << log4cpp::Priority::INFO << "Added predicted 7th digit! Total digits: " << alignedBoundingBoxes.size();
                     
                     // Re-sort with the new 7th digit
                     std::sort(alignedBoundingBoxes.begin(), alignedBoundingBoxes.end(), sortRectByX());
                 } else {
-                    rlog << log4cpp::Priority::INFO << "Predicted area rejected - edge density outside range (0.05-0.5)";
+                    rlog << log4cpp::Priority::INFO << "Predicted area rejected - edge density outside range (" 
+                         << _config.getAoiMinEdgeDensity() << "-" << _config.getAoiMaxEdgeDensity() << ")";
                 }
             } else {
                 rlog << log4cpp::Priority::INFO << "Predicted 7th digit area is outside image bounds";
