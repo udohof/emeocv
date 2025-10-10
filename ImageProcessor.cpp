@@ -287,9 +287,9 @@ void ImageProcessor::filterContours(std::vector<std::vector<cv::Point> >& contou
  * This helps remove frame edges and borders from digit recognition.
  */
 cv::Rect ImageProcessor::cropRectangle(const cv::Rect& original, double cropPercent, const cv::Size& imageSize) {
-    // Different crop percentages: 10% horizontal (width), 2% vertical (height)
-    double cropPercentHorizontal = 0.1;  // 10% for width
-    double cropPercentVertical = cropPercentHorizontal * 0.2;  // 2% for height
+    // Use configurable crop percentages from settings
+    double cropPercentHorizontal = _config.getCropPercentHorizontal();
+    double cropPercentVertical = _config.getCropPercentVertical();
     
     // Calculate crop amounts for each side
     int cropX = (int)(original.width * cropPercentHorizontal);
@@ -596,10 +596,11 @@ void ImageProcessor::findCounterDigits() {
                              i == alignedBoundingBoxes.size() - 1);
             
             if (isAOIDigit) {
-                // AOI-specific cropping: 15% horizontal instead of 10%
-                finalRoi = cropRectangleCustom(roi, 0.15, 0.02, img_ret.size());
+                // AOI-specific cropping using configurable parameters
+                finalRoi = cropRectangleCustom(roi, _config.getCropPercentHorizontalAOI(), 
+                                             _config.getCropPercentVerticalAOI(), img_ret.size());
             } else {
-                // Standard cropping: 10% horizontal, 2% vertical
+                // Standard cropping using configurable parameters
                 finalRoi = cropRectangle(roi, 0.1, img_ret.size());
             }
         }

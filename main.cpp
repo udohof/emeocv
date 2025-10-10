@@ -214,7 +214,7 @@ static void usage(const char* progname) {
     std::cout << "  -H : Enable HDR mode for better contrast and higher resolution (Pi Camera only).\n";
     std::cout << "  -d : Enable debug/test mode - saves intermediate processing steps as images.\n";
     std::cout << "  -A : Enable Area-of-Interest for 7th digit prediction (decimal place).\n";
-    std::cout << "  -C : Enable digit cropping and fragment filtering (10% width, 3% height crop + morphological noise removal).\n";
+    std::cout << "  -C : Enable digit cropping and fragment filtering (configurable crop percentages + morphological noise removal).\n";
 }
 
 static void configureLogging(const std::string & priority = "INFO", bool toConsole = false) {

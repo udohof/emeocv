@@ -7,3 +7,7 @@ digitMaxHeight: 90
 digitYAlignment: 10
 ocrMaxDist: 600000.
 trainingDataFilename: "training.yml"
+cropPercentHorizontal: 0.1
+cropPercentVertical: 0.02
+cropPercentHorizontalAOI: 0.15
+cropPercentVerticalAOI: 0.02

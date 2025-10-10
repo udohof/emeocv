@@ -27,6 +27,10 @@ void Config::saveConfig() {
     fs << "areaOfInterest" << _areaOfInterest;
     fs << "cropDigits" << _cropDigits;
     fs << "perspectiveCorrection" << _perspectiveCorrection;
+    fs << "cropPercentHorizontal" << _cropPercentHorizontal;
+    fs << "cropPercentVertical" << _cropPercentVertical;
+    fs << "cropPercentHorizontalAOI" << _cropPercentHorizontalAOI;
+    fs << "cropPercentVerticalAOI" << _cropPercentVerticalAOI;
     fs.release();
 }
 
@@ -45,6 +49,10 @@ void Config::loadConfig() {
         if (!fs["areaOfInterest"].empty()) fs["areaOfInterest"] >> _areaOfInterest;
         if (!fs["cropDigits"].empty()) fs["cropDigits"] >> _cropDigits;
         if (!fs["perspectiveCorrection"].empty()) fs["perspectiveCorrection"] >> _perspectiveCorrection;
+        if (!fs["cropPercentHorizontal"].empty()) fs["cropPercentHorizontal"] >> _cropPercentHorizontal;
+        if (!fs["cropPercentVertical"].empty()) fs["cropPercentVertical"] >> _cropPercentVertical;
+        if (!fs["cropPercentHorizontalAOI"].empty()) fs["cropPercentHorizontalAOI"] >> _cropPercentHorizontalAOI;
+        if (!fs["cropPercentVerticalAOI"].empty()) fs["cropPercentVerticalAOI"] >> _cropPercentVerticalAOI;
         fs.release();
     } else {
         // no config file - create an initial one with default values

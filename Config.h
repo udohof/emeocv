@@ -58,6 +58,35 @@ public:
         return _cannyThreshold2;
     }
 
+    // Crop parameters for digit processing
+    double getCropPercentHorizontal() const {
+        return _cropPercentHorizontal;
+    }
+    void setCropPercentHorizontal(double percent) {
+        _cropPercentHorizontal = percent;
+    }
+
+    double getCropPercentVertical() const {
+        return _cropPercentVertical;
+    }
+    void setCropPercentVertical(double percent) {
+        _cropPercentVertical = percent;
+    }
+
+    double getCropPercentHorizontalAOI() const {
+        return _cropPercentHorizontalAOI;
+    }
+    void setCropPercentHorizontalAOI(double percent) {
+        _cropPercentHorizontalAOI = percent;
+    }
+
+    double getCropPercentVerticalAOI() const {
+        return _cropPercentVerticalAOI;
+    }
+    void setCropPercentVerticalAOI(double percent) {
+        _cropPercentVerticalAOI = percent;
+    }
+
 private:
     int _rotationDegrees;
     float _ocrMaxDist;
@@ -71,6 +100,12 @@ private:
     bool _areaOfInterest = false;
     bool _cropDigits = false;
     bool _perspectiveCorrection = false;
+    
+    // Crop parameters for digit processing
+    double _cropPercentHorizontal = 0.1;      // 10% standard horizontal crop
+    double _cropPercentVertical = 0.02;       // 2% standard vertical crop
+    double _cropPercentHorizontalAOI = 0.15;  // 15% AOI digit horizontal crop
+    double _cropPercentVerticalAOI = 0.02;    // 2% AOI digit vertical crop
 };
 
 #endif /* CONFIG_H_ */
