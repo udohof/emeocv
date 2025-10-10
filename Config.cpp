@@ -27,6 +27,20 @@ void Config::saveConfig() {
     fs << "areaOfInterest" << _areaOfInterest;
     fs << "cropDigits" << _cropDigits;
     fs << "perspectiveCorrection" << _perspectiveCorrection;
+    fs << "cropPercentHorizontal" << _cropPercentHorizontal;
+    fs << "cropPercentVertical" << _cropPercentVertical;
+    fs << "cropPercentHorizontalAOI" << _cropPercentHorizontalAOI;
+    fs << "cropPercentVerticalAOI" << _cropPercentVerticalAOI;
+    fs << "morphKernelSizeDivisor" << _morphKernelSizeDivisor;
+    fs << "morphIterations" << _morphIterations;
+    fs << "morphSizeRatioThreshold" << _morphSizeRatioThreshold;
+    fs << "smartSpacingTolerance" << _smartSpacingTolerance;
+    fs << "smartSizeTolerance" << _smartSizeTolerance;
+    fs << "digitMinWidth" << _digitMinWidth;
+    fs << "perspectiveHeightTolerance" << _perspectiveHeightTolerance;
+    fs << "aoiWidthMultiplier" << _aoiWidthMultiplier;
+    fs << "aoiMinEdgeDensity" << _aoiMinEdgeDensity;
+    fs << "aoiMaxEdgeDensity" << _aoiMaxEdgeDensity;
     fs.release();
 }
 
@@ -45,6 +59,20 @@ void Config::loadConfig() {
         if (!fs["areaOfInterest"].empty()) fs["areaOfInterest"] >> _areaOfInterest;
         if (!fs["cropDigits"].empty()) fs["cropDigits"] >> _cropDigits;
         if (!fs["perspectiveCorrection"].empty()) fs["perspectiveCorrection"] >> _perspectiveCorrection;
+        if (!fs["cropPercentHorizontal"].empty()) fs["cropPercentHorizontal"] >> _cropPercentHorizontal;
+        if (!fs["cropPercentVertical"].empty()) fs["cropPercentVertical"] >> _cropPercentVertical;
+        if (!fs["cropPercentHorizontalAOI"].empty()) fs["cropPercentHorizontalAOI"] >> _cropPercentHorizontalAOI;
+        if (!fs["cropPercentVerticalAOI"].empty()) fs["cropPercentVerticalAOI"] >> _cropPercentVerticalAOI;
+        if (!fs["morphKernelSizeDivisor"].empty()) fs["morphKernelSizeDivisor"] >> _morphKernelSizeDivisor;
+        if (!fs["morphIterations"].empty()) fs["morphIterations"] >> _morphIterations;
+        if (!fs["morphSizeRatioThreshold"].empty()) fs["morphSizeRatioThreshold"] >> _morphSizeRatioThreshold;
+        if (!fs["smartSpacingTolerance"].empty()) fs["smartSpacingTolerance"] >> _smartSpacingTolerance;
+        if (!fs["smartSizeTolerance"].empty()) fs["smartSizeTolerance"] >> _smartSizeTolerance;
+        if (!fs["digitMinWidth"].empty()) fs["digitMinWidth"] >> _digitMinWidth;
+        if (!fs["perspectiveHeightTolerance"].empty()) fs["perspectiveHeightTolerance"] >> _perspectiveHeightTolerance;
+        if (!fs["aoiWidthMultiplier"].empty()) fs["aoiWidthMultiplier"] >> _aoiWidthMultiplier;
+        if (!fs["aoiMinEdgeDensity"].empty()) fs["aoiMinEdgeDensity"] >> _aoiMinEdgeDensity;
+        if (!fs["aoiMaxEdgeDensity"].empty()) fs["aoiMaxEdgeDensity"] >> _aoiMaxEdgeDensity;
         fs.release();
     } else {
         // no config file - create an initial one with default values

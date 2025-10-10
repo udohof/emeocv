@@ -256,19 +256,19 @@ void ImageProcessor::filterContours(std::vector<std::vector<cv::Point> >& contou
     // Calculate scaled parameters based on perspective correction
     int scaledMinHeight = _config.getDigitMinHeight();
     int scaledMaxHeight = _config.getDigitMaxHeight();
-    int scaledMinWidth = 5;
+    int scaledMinWidth = _config.getDigitMinWidth();
     
     if (_perspectiveCorrectionApplied) {
         scaledMinHeight = (int)(_config.getDigitMinHeight() * _perspectiveScaleY);
-        // More generous maximum height to accommodate perspective distortion
-        scaledMaxHeight = (int)(_config.getDigitMaxHeight() * _perspectiveScaleY * 1.3); // 30% more tolerance
-        scaledMinWidth = (int)(5 * _perspectiveScaleX);
+        // More generous maximum height to accommodate perspective distortion using configurable tolerance
+        scaledMaxHeight = (int)(_config.getDigitMaxHeight() * _perspectiveScaleY * _config.getPerspectiveHeightTolerance());
+        scaledMinWidth = (int)(_config.getDigitMinWidth() * _perspectiveScaleX);
         
         log4cpp::Category& rlog = log4cpp::Category::getRoot();
         rlog << log4cpp::Priority::INFO << "Using scaled parameters for digit detection: minHeight=" 
              << scaledMinHeight << " (was " << _config.getDigitMinHeight() << "), maxHeight=" 
              << scaledMaxHeight << " (was " << _config.getDigitMaxHeight() << "), minWidth=" 
-             << scaledMinWidth << " (was 5), Y-scale=" << _perspectiveScaleY;
+             << scaledMinWidth << " (was " << _config.getDigitMinWidth() << "), Y-scale=" << _perspectiveScaleY;
     }
     
     // filter contours by bounding rect size
@@ -287,9 +287,9 @@ void ImageProcessor::filterContours(std::vector<std::vector<cv::Point> >& contou
  * This helps remove frame edges and borders from digit recognition.
  */
 cv::Rect ImageProcessor::cropRectangle(const cv::Rect& original, double cropPercent, const cv::Size& imageSize) {
-    // Different crop percentages: 10% horizontal (width), 2% vertical (height)
-    double cropPercentHorizontal = 0.1;  // 10% for width
-    double cropPercentVertical = cropPercentHorizontal * 0.2;  // 2% for height
+    // Use configurable crop percentages from settings
+    double cropPercentHorizontal = _config.getCropPercentHorizontal();
+    double cropPercentVertical = _config.getCropPercentVertical();
     
     // Calculate crop amounts for each side
     int cropX = (int)(original.width * cropPercentHorizontal);
@@ -348,13 +348,12 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     // Work with a copy of the input image
     cv::Mat result = digitImage.clone();
     
-    // Step 1: Light dilation to merge nearby edges (back to original approach)
-    // Use original conservative parameters to avoid over-dilation
-    int kernelSize = std::max(2, std::min(digitImage.rows, digitImage.cols) / 15); // Original size
+    // Step 1: Light dilation to merge nearby edges using configurable parameters
+    int kernelSize = std::max(2, std::min(digitImage.rows, digitImage.cols) / _config.getMorphKernelSizeDivisor());
     cv::Mat kernel = cv::getStructuringElement(cv::MORPH_ELLIPSE, cv::Size(kernelSize, kernelSize));
     cv::Mat dilated;
-    // Single iteration to avoid excessive merging
-    cv::dilate(result, dilated, kernel);
+    // Use configurable iterations for dilation
+    cv::dilate(result, dilated, kernel, cv::Point(-1,-1), _config.getMorphIterations());
     
     // Step 2: Find contours in dilated image
     std::vector<std::vector<cv::Point>> contours;
@@ -368,7 +367,7 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     if (contours.size() == 1) {
         // Only one contour found - apply erosion to restore original thickness
         cv::Mat singleContourResult;
-        cv::erode(dilated, singleContourResult, kernel);
+        cv::erode(dilated, singleContourResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
         return singleContourResult;
     }
     
@@ -436,7 +435,7 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
         if (hasEnclosedAreas[i]) {
             // Contour has enclosed areas - definitely a valid digit
             validContourIndices.push_back(i);
-        } else if (areaRatio > 0.4) {
+        } else if (areaRatio > _config.getMorphSizeRatioThreshold()) {
             // Large contour without holes - might be damaged digit (broken "0", "6", etc.)
             // Keep as fallback to avoid losing valid digits due to poor image quality
             validContourIndices.push_back(i);
@@ -450,11 +449,11 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     }
     
     // Check if we have similarly sized valid contours
-    if (validContourIndices.size() > 1 && sizeRatio > 0.4) {
-        // Multiple valid contours with similar sizes - likely digit with complex structure
+    if (validContourIndices.size() > 1 && sizeRatio > _config.getMorphSizeRatioThreshold()) {
+        // Multiple valid contours with similar sizes - likely digit with complex structure (0, 6, 8, 9)
         // Keep all valid contours, just apply erosion to restore thickness
         cv::Mat preservedResult;
-        cv::erode(dilated, preservedResult, kernel);
+        cv::erode(dilated, preservedResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
         return preservedResult;
     }
     
@@ -469,9 +468,9 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
     dilated.copyTo(filteredDilated, mask);
     
     // Step 7: Erode the filtered result back to original thickness
-    // Single erosion to match single dilation
+    // Use same number of iterations as dilation to maintain balance
     cv::Mat finalResult;
-    cv::erode(filteredDilated, finalResult, kernel);
+    cv::erode(filteredDilated, finalResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
     
     return finalResult;
 }
@@ -555,18 +554,18 @@ void ImageProcessor::findCounterDigits() {
         
         rlog << log4cpp::Priority::INFO << "Average spacing: " << avgSpacing << ", width: " << avgWidth << ", height: " << avgHeight;
         
-        // Check regularity (spacing variance < 50% of average)
+        // Check regularity using configurable spacing tolerance
         for (int s : spacings) {
-            if (abs(s - avgSpacing) > avgSpacing * 0.5) {
+            if (abs(s - avgSpacing) > avgSpacing * _config.getSmartSpacingTolerance()) {
                 regularSpacing = false;
                 break;
             }
         }
         
-        // Check size similarity (width/height variance < 30% of average)
+        // Check size similarity using configurable size tolerance
         for (size_t i = 0; i < widths.size(); i++) {
-            if (abs(widths[i] - avgWidth) > avgWidth * 0.3 || 
-                abs(heights[i] - avgHeight) > avgHeight * 0.3) {
+            if (abs(widths[i] - avgWidth) > avgWidth * _config.getSmartSizeTolerance() || 
+                abs(heights[i] - avgHeight) > avgHeight * _config.getSmartSizeTolerance()) {
                 similarSizes = false;
                 break;
             }
@@ -583,8 +582,8 @@ void ImageProcessor::findCounterDigits() {
             int decimalsX = lastBox.x + lastBox.width + avgSpacing;
             int decimalsY = lastBox.y; // same Y as other digits
             
-            // Use 120% of average width for decimal box to ensure complete digit capture
-            int decimalsWidth = (int)(avgWidth * 1.20);
+            // Use configurable width multiplier for decimal box to ensure complete digit capture
+            int decimalsWidth = (int)(avgWidth * _config.getAoiWidthMultiplier());
             int decimalsHeight = avgHeight;
             
             cv::Rect predictedDecimalBox(decimalsX, decimalsY, decimalsWidth, decimalsHeight);
@@ -608,15 +607,16 @@ void ImageProcessor::findCounterDigits() {
                 rlog << log4cpp::Priority::INFO << "Decimal area edge density: " << edgeDensity 
                      << " (pixels: " << edgePixels << "/" << (decimalsWidth * decimalsHeight) << ")";
                 
-                // If edge density is reasonable (between 5% and 50%), add as 7th digit
-                if (edgeDensity >= 0.05 && edgeDensity <= 0.5) {
+                // If edge density is reasonable using configurable thresholds, add as 7th digit
+                if (edgeDensity >= _config.getAoiMinEdgeDensity() && edgeDensity <= _config.getAoiMaxEdgeDensity()) {
                     alignedBoundingBoxes.push_back(predictedDecimalBox);
                     rlog << log4cpp::Priority::INFO << "Added predicted 7th digit! Total digits: " << alignedBoundingBoxes.size();
                     
                     // Re-sort with the new 7th digit
                     std::sort(alignedBoundingBoxes.begin(), alignedBoundingBoxes.end(), sortRectByX());
                 } else {
-                    rlog << log4cpp::Priority::INFO << "Predicted area rejected - edge density outside range (0.05-0.5)";
+                    rlog << log4cpp::Priority::INFO << "Predicted area rejected - edge density outside range (" 
+                         << _config.getAoiMinEdgeDensity() << "-" << _config.getAoiMaxEdgeDensity() << ")";
                 }
             } else {
                 rlog << log4cpp::Priority::INFO << "Predicted 7th digit area is outside image bounds";
@@ -652,10 +652,11 @@ void ImageProcessor::findCounterDigits() {
                              i == alignedBoundingBoxes.size() - 1);
             
             if (isAOIDigit) {
-                // AOI-specific cropping: 15% horizontal instead of 10%
-                finalRoi = cropRectangleCustom(roi, 0.15, 0.02, img_ret.size());
+                // AOI-specific cropping using configurable parameters
+                finalRoi = cropRectangleCustom(roi, _config.getCropPercentHorizontalAOI(), 
+                                             _config.getCropPercentVerticalAOI(), img_ret.size());
             } else {
-                // Standard cropping: 10% horizontal, 2% vertical
+                // Standard cropping using configurable parameters
                 finalRoi = cropRectangle(roi, 0.1, img_ret.size());
             }
         }
