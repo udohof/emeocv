@@ -214,7 +214,7 @@ static void usage(const char* progname) {
     std::cout << "  -H : Enable HDR mode for better contrast and higher resolution (Pi Camera only).\n";
     std::cout << "  -d : Enable debug/test mode - saves intermediate processing steps as images.\n";
     std::cout << "  -A : Enable Area-of-Interest for 7th digit prediction (decimal place).\n";
-    std::cout << "  -C : Enable digit cropping and fragment filtering (10% width, 3% height crop + morphological noise removal).\n";
+    std::cout << "  -C : Enable digit cropping and fragment filtering (configurable crop percentages + morphological noise removal).\n";
 }
 
 static void configureLogging(const std::string & priority = "INFO", bool toConsole = false) {
@@ -246,8 +246,9 @@ int main(int argc, char **argv) {
     bool testMode = false;
     bool areaOfInterest = false;
     bool cropDigits = false;
+    bool perspectiveCorrection = false;
 
-    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:hdHAC")) != -1) {
+    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:hdHACP")) != -1) {
     switch (opt) {
             case 'i':
                 inputDir = optarg;
@@ -263,6 +264,9 @@ int main(int argc, char **argv) {
                 break;
             case 'C':
                 cropDigits = true;
+                break;
+            case 'P':
+                perspectiveCorrection = true;
                 break;
             case 'l':
             case 't':
@@ -321,6 +325,7 @@ int main(int argc, char **argv) {
     config.setTestMode(testMode);
     config.setAreaOfInterest(areaOfInterest);
     config.setCropDigits(cropDigits);
+    config.setPerspectiveCorrection(perspectiveCorrection);
 
     switch (cmd) {
         case 'o':
