@@ -238,6 +238,85 @@ perspectiveHeightTolerance: 1.3
 | Vertikale Linien stören | `perspectiveHeightTolerance` auf 1.2 senken |
 | Schmale Ziffern (1, I) fehlen | `digitMinWidth` auf 3 senken |
 
+## Enclosed Area Detection Parameter (-C Option)
+
+Die Enclosed Area Detection erweitert die Smart Fragment Filtering um intelligente Loch-Erkennung:
+
+### Verfügbare Parameter
+
+#### enclosedAreaDetection
+- **Standard**: `true` (aktiviert)
+- **Beschreibung**: Aktiviert/deaktiviert die erweiterte Enclosed Area Detection
+- **Zweck**: Erkennt Ziffern mit charakteristischen Löchern (0, 4, 6, 8, 9)
+- **Performance**: Minimal zusätzlicher Rechenaufwand bei deutlich verbesserter Genauigkeit
+
+```yaml
+enclosedAreaDetection: true       # Aktiviert erweiterte Loch-Erkennung
+```
+
+#### minHoleAreaRatio
+- **Standard**: `0.02` (2%)
+- **Beschreibung**: Minimale Lochgröße als Anteil der Gesamt-Konturfläche
+- **Zweck**: Filtert zu kleine Löcher aus (Rauschen vs. echte Ziffern-Löcher)
+- **Empfohlener Bereich**: 0.01-0.05 (1%-5%)
+
+```yaml
+minHoleAreaRatio: 0.02           # Löcher müssen mindestens 2% der Konturfläche haben
+```
+
+### Funktionsweise
+
+Die Enclosed Area Detection analysiert jede Ziffer-Kontur auf eingeschlossene Bereiche:
+
+1. **Loch-Erkennung**: Findet alle Löcher innerhalb einer Ziffer
+2. **Größen-Filterung**: Verwirft zu kleine Löcher (Rauschen) 
+3. **Intelligente Klassifikation**: Bevorzugt Konturen mit signifikanten Löchern
+4. **Fallback-Strategie**: Behält große Konturen ohne Löcher als Backup
+
+### Anwendungsbeispiele
+
+**Maximale Genauigkeit** (empfohlen):
+```yaml
+enclosedAreaDetection: true
+minHoleAreaRatio: 0.02
+```
+
+**Konservative Einstellung** (weniger sensitiv):
+```yaml
+enclosedAreaDetection: true
+minHoleAreaRatio: 0.04           # Nur größere, eindeutige Löcher
+```
+
+**Deaktiviert** (Fallback auf einfache Größen-Filterung):
+```yaml
+enclosedAreaDetection: false     # Verwendet nur klassische Smart Fragment Filtering
+```
+
+### Ziffern-Typen und Loch-Erkennung
+
+| Ziffern-Typ | Löcher | Erkennung |
+|-------------|--------|-----------|
+| **0, 6, 8, 9** | 1+ Löcher | ✅ Excellent |
+| **4** | Dreieckiges Loch | ✅ Sehr gut |
+| **A, B, D, O, P, Q, R** | 1+ Löcher | ✅ Excellent |
+| **1, 2, 3, 5, 7** | Keine Löcher | ⚠️ Fallback-Logik |
+| **Fragmente** | Keine Struktur | ❌ Gefiltert |
+
+### Integration mit Smart Fragment Filtering
+
+- **Aktiviert**: Enclosed Area Detection + Smart Fragment Filtering
+- **Deaktiviert**: Nur Smart Fragment Filtering (Rückwärtskompatibilität)
+- **Kombinierte Intelligenz**: Beste Ergebnisse durch beide Algorithmen
+
+### Troubleshooting
+
+| Problem | Lösung |
+|---------|--------|
+| Ziffern mit Löchern werden nicht erkannt | `minHoleAreaRatio` auf 0.01 senken |
+| Zu viele Fragmente bleiben erhalten | `minHoleAreaRatio` auf 0.03 erhöhen |
+| Performance-Probleme | `enclosedAreaDetection` deaktivieren |
+| Inkonsistente Ergebnisse | `minHoleAreaRatio` auf 0.02 (Standard) |
+
 ## Debug Ausgabe
 
 Mit `-d` Option werden die angewandten Parameter in den Debug-Dateien dokumentiert:

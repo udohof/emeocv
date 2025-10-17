@@ -371,10 +371,42 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
         return singleContourResult;
     }
     
-    // Step 3: Intelligent contour analysis - handle similar-sized contours
+    // Step 3: Enhanced contour analysis with enclosed area detection (configurable)
     std::vector<double> areas;
+    std::vector<bool> hasEnclosedAreas;
+    
     for (size_t i = 0; i < contours.size(); i++) {
         areas.push_back(cv::contourArea(contours[i]));
+        
+        if (_config.getEnclosedAreaDetection()) {
+            // Check if this contour has enclosed areas (holes) after dilation
+            cv::Mat contourMask = cv::Mat::zeros(dilated.size(), CV_8UC1);
+            cv::drawContours(contourMask, contours, i, cv::Scalar(255), cv::FILLED);
+            
+            // Find inner contours (holes) within this filled contour
+            std::vector<std::vector<cv::Point>> innerContours;
+            std::vector<cv::Vec4i> innerHierarchy;
+            cv::findContours(contourMask, innerContours, innerHierarchy, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+            
+            // Count significant holes - using configurable minimum hole area ratio
+            int significantHoles = 0;
+            double minHoleArea = areas[i] * _config.getMinHoleAreaRatio();
+            
+            for (size_t j = 0; j < innerContours.size(); j++) {
+                // Check if this is a hole (has parent in hierarchy)
+                if (innerHierarchy[j][3] != -1) { // Has parent = is a hole
+                    double holeArea = cv::contourArea(innerContours[j]);
+                    if (holeArea > minHoleArea) {
+                        significantHoles++;
+                    }
+                }
+            }
+            
+            hasEnclosedAreas.push_back(significantHoles > 0);
+        } else {
+            // Enclosed area detection disabled - assume no enclosed areas
+            hasEnclosedAreas.push_back(false);
+        }
     }
     
     // Find largest and second largest areas
@@ -392,26 +424,63 @@ cv::Mat ImageProcessor::filterFragments(const cv::Mat& digitImage) {
         }
     }
     
-    // Check if we have similarly sized contours (e.g., inner and outer ring of "0")
+    // Step 4: Advanced fragment filtering with enclosed area analysis
     double sizeRatio = (maxArea > 0) ? (secondMaxArea / maxArea) : 0;
     
-    if (sizeRatio > _config.getMorphSizeRatioThreshold()) {
-        // Similar sized contours found - likely digit with holes (0, 6, 8, 9)
-        // Keep all significant contours, just apply erosion to restore thickness
+    // Filter contours based on enclosed area detection (if enabled) or size-based fallback
+    std::vector<int> validContourIndices;
+    
+    if (_config.getEnclosedAreaDetection()) {
+        // Advanced filtering using enclosed area analysis
+        for (size_t i = 0; i < contours.size(); i++) {
+            double areaRatio = areas[i] / maxArea;
+            
+            // Balanced approach: Prefer enclosed areas but allow fallbacks for edge cases
+            // - Primary rule: Contours with enclosed areas are likely valid digits
+            // - Fallback rule: Large contours might be damaged digits (e.g., broken "0")
+            // - Reject rule: Small contours without structure are definitely fragments
+            
+            if (hasEnclosedAreas[i]) {
+                // Contour has enclosed areas - definitely a valid digit
+                validContourIndices.push_back(i);
+            } else if (areaRatio > _config.getMorphSizeRatioThreshold()) {
+                // Large contour without holes - might be damaged digit (broken "0", "6", etc.)
+                // Keep as fallback to avoid losing valid digits due to poor image quality
+                validContourIndices.push_back(i);
+            }
+            // Small contours without enclosed areas are fragments - reject them
+        }
+    } else {
+        // Fallback: Simple size-based filtering (original Smart Fragment Filtering)
+        // Keep only largest contour when enclosed area detection is disabled
+        validContourIndices.push_back(maxAreaIdx);
+    }
+    
+    // If no valid contours found, fall back to largest contour
+    if (validContourIndices.empty()) {
+        validContourIndices.push_back(maxAreaIdx);
+    }
+    
+    // Check if we have similarly sized valid contours
+    if (validContourIndices.size() > 1 && sizeRatio > _config.getMorphSizeRatioThreshold()) {
+        // Multiple valid contours with similar sizes - likely digit with complex structure (0, 6, 8, 9)
+        // Keep all valid contours, just apply erosion to restore thickness
         cv::Mat preservedResult;
         cv::erode(dilated, preservedResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
         return preservedResult;
     }
     
-    // Step 4: Create mask with only the largest contour
+    // Step 5: Create mask with valid contours only
     cv::Mat mask = cv::Mat::zeros(dilated.size(), CV_8UC1);
-    cv::drawContours(mask, contours, maxAreaIdx, cv::Scalar(255), cv::FILLED);
+    for (int idx : validContourIndices) {
+        cv::drawContours(mask, contours, idx, cv::Scalar(255), cv::FILLED);
+    }
     
-    // Step 5: Apply mask to dilated image (preserves merged contour)
+    // Step 6: Apply mask to dilated image (preserves valid contours)
     cv::Mat filteredDilated = cv::Mat::zeros(dilated.size(), CV_8UC1);
     dilated.copyTo(filteredDilated, mask);
     
-    // Step 6: Erode the filtered result back to original thickness
+    // Step 7: Erode the filtered result back to original thickness
     // Use same number of iterations as dilation to maintain balance
     cv::Mat finalResult;
     cv::erode(filteredDilated, finalResult, kernel, cv::Point(-1,-1), _config.getMorphIterations());
@@ -601,7 +670,7 @@ void ImageProcessor::findCounterDigits() {
                                              _config.getCropPercentVerticalAOI(), img_ret.size());
             } else {
                 // Standard cropping using configurable parameters
-                finalRoi = cropRectangle(roi, 0.1, img_ret.size());
+                finalRoi = cropRectangle(roi, 0.0, img_ret.size()); // Parameter wird in Funktion ignoriert
             }
         }
         
