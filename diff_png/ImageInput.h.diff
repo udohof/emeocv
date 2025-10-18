@@ -1,0 +1,23 @@
+--- /tmp/emeocv_original/ImageInput.h	2025-10-18 10:04:01.818048781 +0000
++++ /workspaces/emeocv/ImageInput.h	2025-10-18 10:02:57.706052542 +0000
+@@ -46,12 +46,18 @@
+ 
+ class CameraInput: public ImageInput {
+ public:
+-    CameraInput(int device);
++    CameraInput(int device, bool useHdri = false);
++    void setHdri(bool enable);
++    void setTestMode(bool enable);
+ 
+     virtual bool nextImage();
+ 
+ private:
+-    cv::VideoCapture _capture;
++    cv::VideoCapture _capture; // Nur noch Pi-Kamera, USB-Kamera entfällt
++    bool _useRpicam = false;   // Flag ob rpicam-still verwendet wird
++    bool _useHdri = false;     // Enable HDR mode for rpicam
++    bool _testMode = false;    // Test-Modus für Entwicklung
++    cv::Mat _testImage;        // Statisches Testbild
+ };
+ 
+ #endif /* IMAGEINPUT_H_ */

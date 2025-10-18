@@ -1,0 +1,177 @@
+--- /tmp/emeocv_original/main.cpp	2025-10-18 10:04:01.821048781 +0000
++++ /workspaces/emeocv/main.cpp	2025-10-18 10:02:57.711052542 +0000
+@@ -38,11 +38,9 @@
+ #define VERSION "0.9.7"
+ #endif
+ 
+-static void testOcr(ImageInput* pImageInput) {
++static void testOcr(ImageInput* pImageInput, Config& config) {
+     log4cpp::Category::getRoot().info("testOcr");
+ 
+-    Config config;
+-    config.loadConfig();
+     ImageProcessor proc(config);
+     proc.debugWindow();
+     proc.debugDigits();
+@@ -77,11 +75,9 @@
+     }
+ }
+ 
+-static void learnOcr(ImageInput* pImageInput) {
++static void learnOcr(ImageInput* pImageInput, Config& config) {
+     log4cpp::Category::getRoot().info("learnOcr");
+ 
+-    Config config;
+-    config.loadConfig();
+     ImageProcessor proc(config);
+     proc.debugWindow();
+ 
+@@ -110,11 +106,9 @@
+     }
+ }
+ 
+-static void adjustCamera(ImageInput* pImageInput) {
++static void adjustCamera(ImageInput* pImageInput, Config& config) {
+     log4cpp::Category::getRoot().info("adjustCamera");
+ 
+-    Config config;
+-    config.loadConfig();
+     ImageProcessor proc(config);
+     proc.debugWindow();
+     proc.debugDigits();
+@@ -162,11 +156,9 @@
+     }
+ }
+ 
+-static void writeData(ImageInput* pImageInput) {
++static void writeData(ImageInput* pImageInput, Config& config) {
+     log4cpp::Category::getRoot().info("writeData");
+ 
+-    Config config;
+-    config.loadConfig();
+     ImageProcessor proc(config);
+ 
+     Plausi plausi;
+@@ -206,7 +198,7 @@
+ static void usage(const char* progname) {
+     std::cout << "Program to read and recognize the counter of an electricity meter with OpenCV.\n";
+     std::cout << "Version: " << VERSION << std::endl;
+-    std::cout << "Usage: " << progname << " [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>\n";
++    std::cout << "Usage: " << progname << " [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>] [-H] [-d]\n";
+     std::cout << "\nImage input:\n";
+     std::cout << "  -i <image directory> : read image files (png) from directory.\n";
+     std::cout << "  -c <camera number> : read images from camera.\n";
+@@ -219,6 +211,10 @@
+     std::cout << "\nOptions:\n";
+     std::cout << "  -s <n> : Sleep n milliseconds after processing of each image (default=1000).\n";
+     std::cout << "  -v <l> : Log level. One of DEBUG, INFO, ERROR (default).\n";
++    std::cout << "  -H : Enable HDR mode for better contrast and higher resolution (Pi Camera only).\n";
++    std::cout << "  -d : Enable debug/test mode - saves intermediate processing steps as images.\n";
++    std::cout << "  -A : Enable Area-of-Interest for 7th digit prediction (decimal place).\n";
++    std::cout << "  -C : Enable digit cropping and fragment filtering (configurable crop percentages + morphological noise removal).\n";
+ }
+ 
+ static void configureLogging(const std::string & priority = "INFO", bool toConsole = false) {
+@@ -244,16 +240,33 @@
+     std::string logLevel = "ERROR";
+     char cmd = 0;
+     int cmdCount = 0;
++    bool useHdri = false;
++    int cameraDevice = -1;
++    std::string inputDir;
++    bool testMode = false;
++    bool areaOfInterest = false;
++    bool cropDigits = false;
++    bool perspectiveCorrection = false;
+ 
+-    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:h")) != -1) {
+-        switch (opt) {
++    while ((opt = getopt(argc, argv, "i:c:ltaws:o:v:hdHACP")) != -1) {
++    switch (opt) {
+             case 'i':
+-                pImageInput = new DirectoryInput(Directory(optarg, ".png"));
+-                inputCount++;
++                inputDir = optarg;
+                 break;
+             case 'c':
+-                pImageInput = new CameraInput(atoi(optarg));
+-                inputCount++;
++                cameraDevice = atoi(optarg);
++                break;
++            case 'H':
++                useHdri = true;
++                break;
++            case 'A':
++                areaOfInterest = true;
++                break;
++            case 'C':
++                cropDigits = true;
++                break;
++            case 'P':
++                perspectiveCorrection = true;
+                 break;
+             case 'l':
+             case 't':
+@@ -273,6 +286,9 @@
+             case 'v':
+                 logLevel = optarg;
+                 break;
++            case 'd':
++                testMode = true;
++                break;
+             case 'h':
+             default:
+                 usage(argv[0]);
+@@ -280,6 +296,17 @@
+                 break;
+         }
+     }
++    
++    // Create input objects with all options known
++    if (!inputDir.empty()) {
++        pImageInput = new DirectoryInput(Directory(inputDir.c_str(), ".png"));
++        inputCount++;
++    }
++    if (cameraDevice >= 0) {
++        pImageInput = new CameraInput(cameraDevice, useHdri);
++        inputCount++;
++    }
++    
+     if (inputCount != 1) {
+         std::cerr << "*** You should specify exactly one camera or input directory!\n\n";
+         usage(argv[0]);
+@@ -293,6 +320,13 @@
+ 
+     configureLogging(logLevel, cmd == 'a');
+ 
++    Config config;
++    config.loadConfig();
++    config.setTestMode(testMode);
++    config.setAreaOfInterest(areaOfInterest);
++    config.setCropDigits(cropDigits);
++    config.setPerspectiveCorrection(perspectiveCorrection);
++
+     switch (cmd) {
+         case 'o':
+             pImageInput->setOutputDir(outputDir);
+@@ -300,16 +334,16 @@
+             capture(pImageInput);
+             break;
+         case 'l':
+-            learnOcr(pImageInput);
++            learnOcr(pImageInput, config);
+             break;
+         case 't':
+-            testOcr(pImageInput);
++            testOcr(pImageInput, config);
+             break;
+         case 'a':
+-            adjustCamera(pImageInput);
++            adjustCamera(pImageInput, config);
+             break;
+         case 'w':
+-            writeData(pImageInput);
++            writeData(pImageInput, config);
+             break;
+     }
+ 

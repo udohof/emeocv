@@ -1,0 +1,10 @@
+--- /tmp/emeocv_original/Makefile	2025-10-18 10:04:01.820048781 +0000
++++ /workspaces/emeocv/Makefile	2025-10-18 10:02:57.706052542 +0000
+@@ -15,6 +15,7 @@
+   KNearestOcr.o \
+   Plausi.o \
+   RRDatabase.o \
++  DebugOutput.o \
+   main.o \
+   )
+ 

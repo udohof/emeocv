@@ -1,0 +1,27 @@
+--- /tmp/emeocv_original/KNearestOcr.cpp	2025-10-18 10:04:01.819048781 +0000
++++ /workspaces/emeocv/KNearestOcr.cpp	2025-10-18 10:02:57.706052542 +0000
+@@ -16,6 +16,7 @@
+ #include <exception>
+ 
+ #include "KNearestOcr.h"
++#include "DebugOutput.h"
+ 
+ KNearestOcr::KNearestOcr(const Config & config) :
+ #if CV_MAJOR_VERSION == 2
+@@ -122,6 +123,16 @@
+         } else if (rlog.isInfoEnabled()) {
+             rlog << log4cpp::Priority::INFO << "OCR rejected: " << (int) result;
+         }
++        
++        // Debug: Save OCR input with recognition result
++        if (_config.getTestMode()) {
++            std::map<std::string, std::string> params;
++            params["recognized_digit"] = std::string(1, cres);
++            params["result"] = std::to_string((int) result);
++            params["distance"] = std::to_string(dists.at<float>(0, 0));
++            params["max_dist"] = std::to_string(_config.getOcrMaxDist());
++            DebugOutput::saveDebugImage(img, "KNearestOcr_recognize", params);
++        }
+         rlog << log4cpp::Priority::DEBUG << "results: " << results;
+         rlog << log4cpp::Priority::DEBUG << "neighborResponses: " << neighborResponses;
+         rlog << log4cpp::Priority::DEBUG << "dists: " << dists;

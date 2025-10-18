@@ -1,0 +1,22 @@
+--- /tmp/emeocv_original/config.yml	2025-10-18 10:04:01.821048781 +0000
++++ /workspaces/emeocv/config.yml	2025-10-18 10:02:57.707052542 +0000
+@@ -7,3 +7,19 @@
+ digitYAlignment: 10
+ ocrMaxDist: 600000.
+ trainingDataFilename: "training.yml"
++cropPercentHorizontal: 0.1
++cropPercentVertical: 0.02
++cropPercentHorizontalAOI: 0.15
++cropPercentVerticalAOI: 0.02
++morphKernelSizeDivisor: 15
++morphIterations: 1
++morphSizeRatioThreshold: 0.4
++smartSpacingTolerance: 0.5
++smartSizeTolerance: 0.3
++digitMinWidth: 5
++perspectiveHeightTolerance: 1.3
++aoiWidthMultiplier: 1.2
++aoiMinEdgeDensity: 0.05
++aoiMaxEdgeDensity: 0.5
++enclosedAreaDetection: 1
++minHoleAreaRatio: 0.02

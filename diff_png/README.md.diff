@@ -1,0 +1,62 @@
+--- /tmp/emeocv_original/README.md	2025-10-18 10:04:01.820048781 +0000
++++ /workspaces/emeocv/README.md	2025-10-18 10:02:57.707052542 +0000
+@@ -24,7 +24,7 @@
+ Usage
+ =====
+ 
+-    emeocv [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>]
++    emeocv [-i <dir>|-c <cam>] [-l|-t|-a|-w|-o <dir>] [-s <delay>] [-v <level>] [-d]
+ 
+     Image input:
+         -i <image directory> : read image files (png) from directory.
+@@ -40,6 +40,50 @@
+     Options:
+         -s <n> : Sleep n milliseconds after processing of each image (default=1000).
+         -v <l> : Log level. One of DEBUG, INFO, ERROR (default).
++        -d : Enable debug/test mode - saves intermediate processing steps as images.
++
++Debug Mode
++==========
++
++The debug mode (`-d` option) is particularly useful for testing and development. When enabled, it saves intermediate images from each processing step to help analyze the image processing workflow.
++
++### Debug Output
++
++All debug images are saved to the `debug_output/` directory with descriptive filenames that include:
++- Function name
++- Processing parameters
++- Step sequence
++
++### Example Debug Files
++
++When processing an electricity meter image with debug mode enabled:
++
++    ./emeocv -i images/ -t -d
++
++The following debug images will be generated:
++
++    debug_output/ImageProcessor_grayscale.png
++    debug_output/ImageProcessor_rotate_degrees=0.png
++    debug_output/ImageProcessor_rotate_degrees=2.5.png
++    debug_output/ImageProcessor_cannyEdges_threshold1=100_threshold2=200.png
++    debug_output/ImageProcessor_digit_digit_index=0_x=45_y=120_width=18_height=25.png
++    debug_output/ImageProcessor_digit_digit_index=1_x=65_y=120_width=20_height=25.png
++    debug_output/KNearestOcr_recognize_recognized_digit=3_result=3_distance=1250.5.png
++    debug_output/KNearestOcr_recognize_recognized_digit=?_result=7_distance=750000.0.png
++
++### Debug Image Types
++
++- **Grayscale conversion**: Shows the original image converted to grayscale
++- **Rotation steps**: Images after initial rotation and skew correction
++- **Edge detection**: Result of Canny edge detection with threshold parameters
++- **Individual digits**: Each detected digit region with position and size information
++- **OCR recognition**: Each digit with recognition result, confidence distance, and acceptance status
++
++This debug functionality helps with:
++- **Parameter tuning**: Visualize the effect of different thresholds and settings
++- **Algorithm validation**: Verify that each processing step works correctly
++- **Troubleshooting**: Identify where the processing chain fails for specific images
++- **Training data creation**: Extract individual digit images for OCR training
+ 
+ 
+ There is a tutorial that explains use case and function of the program:
