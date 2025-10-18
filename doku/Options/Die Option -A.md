@@ -107,3 +107,75 @@ Berechnet die wahrscheinliche Position der 7. Ziffer
 Validiert ob dort tatsächlich eine Ziffer vorhanden ist
 Fügt hinzu die 7. Ziffer zur Erkennung, falls alle Tests bestehen
 Das macht die Zählererkennung vollständiger und robuster, ohne manuelle Konfiguration der Dezimalstellen-Position!
+
+
+
+# Änderungsdokumentation zur Option -A (Area-of-Interest für die 7. Ziffer)
+
+## Vorteile der Option -A
+- **Automatische 7-Digit-Erkennung**: Kein manuelles Definieren der Dezimalstellen-Position nötig.
+- **Intelligente Qualitätskontrolle**: Nur bei regelmäßig erkannten 6 Ziffern wird AOI aktiviert.
+- **Robuste Parameter**: Alle Schwellwerte sind konfigurierbar.
+- **Integration mit anderen Features**: Funktioniert mit -C (Fragment-Filter), -P (Perspektivkorrektur) und Enclosed Area Detection.
+- **Vollständige und robuste Zählererkennung**: Die Erkennung wird vollständiger und zuverlässiger.
+
+## Funktionsweise
+### Grundprinzip
+Die -A Option erweitert die normale 6-Ziffern-Erkennung um eine intelligente Vorhersage der Position der 7. Ziffer (Dezimalstelle) und fügt diese automatisch hinzu.
+
+### Algorithmus-Ablauf
+1. **Analyse der erkannten 6 Ziffern**: Analysiere die Abstände und Größen der ersten 6 Ziffern.
+2. **Qualitätskontrolle**: Prüfe Regelmäßigkeit der Abstände und Größen mit konfigurierbaren Toleranzen (`smartSpacingTolerance`, `smartSizeTolerance`).
+3. **AOI-Berechnung**: Nur bei regulären Mustern wird die AOI-Box für die 7. Ziffer berechnet.
+4. **Edge-Density-Validierung**: Prüfe, ob im AOI-Bereich tatsächlich eine Ziffer vorhanden ist (Kantendichte).
+5. **Beschneidung**: Die AOI-Ziffer wird mit eigenen Crop-Parametern beschnitten (`cropPercentHorizontalAOI`, `cropPercentVerticalAOI`).
+
+### Beispielhafte Parameter
+```yaml
+smartSpacingTolerance: 0.5   # Wie regelmäßig müssen Abstände sein?
+smartSizeTolerance: 0.3      # Wie ähnlich müssen Größen sein?
+aoiWidthMultiplier: 1.2      # Wie breit soll die AOI-Box sein?
+aoiMinEdgeDensity: 0.05      # Mindest-Kantendichte
+aoiMaxEdgeDensity: 0.5       # Maximal-Kantendichte
+cropPercentHorizontalAOI: 0.15 # 15% horizontale Beschneidung
+cropPercentVerticalAOI: 0.02   # 2% vertikale Beschneidung
+```
+
+## Beispielhafte Nutzung
+```bash
+./emeocv -c 0 -A -C -d -t
+./emeocv -i /path/to/images -A -C -t
+```
+
+## Kompatibilität
+- Funktioniert mit -C (Smart Fragment Filtering)
+- Kompatibel mit Debug-Modus (-d) für Visualisierung
+- Integriert mit Konfigurationssystem
+- Rückwärtskompatibel (off by default)
+
+## Code-Änderungen (Dokumentation)
+### Hauptprogramm (`main.cpp`)
+- Erweiterung der Kommandozeilenoptionen um `-A`:
+	```cpp
+	std::cout << "  -A : Enable Area-of-Interest for 7th digit prediction (decimal place).\n";
+	```
+- Logik zur AOI-Erkennung und Validierung integriert.
+- Crop-Parameter für AOI werden aus Konfiguration geladen und angewendet.
+
+### Konfigurationsdateien (`config.yml`, `CROP_PARAMETERS.md`)
+- Neue Parameter für AOI-Erkennung und Beschneidung hinzugefügt.
+- Dokumentation der Parameter und Beispielwerte.
+
+### Bildverarbeitung (`ImageProcessor.cpp`)
+- Implementierung der AOI-Vorhersage und Kantendichte-Prüfung.
+- Integration mit Fragment-Filterung (-C Option).
+
+### Debug-Ausgabe (`DebugOutput.cpp`)
+- Visualisierung der AOI-Box und der erkannten 7. Ziffer.
+
+## Fazit
+Die Option `-A` bietet eine intelligente und automatische Erkennung der Dezimalstelle auf Stromzählerbildern. Sie erhöht die Zuverlässigkeit und Flexibilität der Zählerstandserkennung und ist mit anderen Optionen kombinierbar.
+
+---
+
+*Letzte Änderung: 18.10.2025*
