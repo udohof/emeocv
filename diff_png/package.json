@@ -1,0 +1,15 @@
+{
+  "name": "diff_png",
+  "version": "1.0.0",
+  "description": "<!doctype html> <html lang=\"en\">   <head>     <meta charset=\"utf-8\" />     <title>Diff to HTML by rtfpessoa</title>",
+  "main": "convert_to_png.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "puppeteer": "^24.25.0"
+  }
+}
