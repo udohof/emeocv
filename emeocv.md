@@ -701,6 +701,44 @@ Ein nach dem beschriebenen Verfahren aufgebauter Prototyp arbeitet seit einigen 
 Diese Veröffentlichung soll Interessierte zu weiteren Versuchen anregen - über entsprechendes [Feedback](https://www.kompf.de/sfn0p.php) würde ich mich sehr freuen! Keinesfalls handelt es sich hierbei um eine Schritt-für-Schritt Anleitung oder gar ein fertiges Programm für den Endanwender. Dazu müssten noch viele weitere Algorithmen implementiert werden, wie zum Beispiel mehr Toleranz gegenüber wechselnden Lichtverhältnissen, automatische Bestimmung und Justierung von Konfigurationsparametern und eine bessere Zeichenerkennung für unterschiedliche Ziffertypen.
 
 Interessante Links
+[Erweiterungen und Verbesserungen für spiegelnde Zähler (2023–2025, Daniel Hofmann)]
+-------------------------------------------------------------------------------
+
+**Hinweis zu Modifikationen:**
+Diese Version enthält Erweiterungen und Verbesserungen von Daniel Hofmann (2023–2025), speziell für einen anderen Zählertyp mit spiegelnder (silberner) Frontplatte. Die Änderungen verbessern die Erkennung bei schwierigen Lichtverhältnissen und bei Zählern mit stark reflektierenden Rahmen. Sie sind vollständig rückwärtskompatibel und optional aktivierbar.
+
+**Motivation:**
+Im Gegensatz zum ursprünglichen Zähler (siehe https://github.com/skaringa/emeocv.git und https://en.kompf.de/cplus/emeocv.html) erzeugt der neue Zählertyp mit spiegelnder Frontplatte harte Rahmen und zusätzliche Fragmente um die Ziffernfelder. Diese beeinträchtigen die automatische Ziffernerkennung erheblich. Die neuen Features filtern gezielt diese Störfragmente heraus und erhöhen die Robustheit der Erkennung.
+
+**Neue Features und Verbesserungen:**
+
+- **Option -C: Digit Cropping & Fragment-Filter**
+    Entfernt störende Rahmen und Fragmente um die Ziffern, insbesondere bei spiegelnden/silbernen Frontplatten. Nutzt morphologische Operationen (dilate, contour filter, erode), um nur die Hauptziffer zu erhalten und Störungen zu entfernen. Parameter sind in `config.yml` konfigurierbar.
+    - Vorteile: Deutlich bessere Ziffernerkennung bei reflektierenden Rahmen, entfernt unerwünschte Fragmente, kompatibel mit Area-of-Interest (-A) und Debug-Modus (-d), rückwärtskompatibel (standardmäßig aus).
+
+- **Option -A: Area-of-Interest (AOI) für die 7. Ziffer**
+    Erkennt und verarbeitet die Dezimalstelle (7. Ziffer) für Zähler mit zusätzlicher Nachkommastelle. AOI wird automatisch berechnet und validiert. Funktioniert nahtlos mit -C und -P.
+    - Vorteile: Automatische 7-stellige Erkennung, adaptive Qualitätskontrolle, robuste Parameter für verschiedene Zählertypen, vollständig konfigurierbar.
+
+- **Option -P: Perspektivkorrektur**
+    Korrigiert automatisch perspektivische Verzerrungen bei schräg aufgenommenen Bildern. Erkennt die Ecken der Zähleranzeige und transformiert das Bild in eine frontale Ansicht. Verbessert die Erkennung bei schwierigen Montagepositionen oder starken Reflexionen.
+
+- **Reflexions- und Fragmentfilter**
+    Spezielle Filter und Parameter (siehe `config.yml`), um Reflexionen und Störungen durch spiegelnde Frontplatten zu unterdrücken. Umfasst intensitäts-, histogramm- und geometriebasierte Filterung sowie Multi-Scale-Analyse für robuste Ziffernerkennung.
+
+- **Erweiterte Debug-Ausgaben**
+    Debug-Bilder enthalten jetzt Informationen zu Cropping, Filterung, AOI und Perspektivkorrektur. Dateinamen zeigen an, welche Filter und Optionen aktiv waren (z.B. `filter=fragments_removed`, `aoi=on`, `perspective=corrected`).
+
+- **Konfiguration**
+    Alle neuen Features sind über `config.yml` konfigurierbar (siehe auch `CROP_PARAMETERS.md`).
+
+**Kompatibilität:**
+Alle Erweiterungen sind optional und beeinträchtigen nicht die Standardfunktionalität. Sie wurden speziell für Zähler mit spiegelnder Frontplatte entwickelt, funktionieren aber auch mit anderen Typen.
+
+---
+
+**Modifikationen und Erweiterungen von Daniel Hofmann, 2023–2025.**
+Diese Verbesserungen wurden gezielt für Zähler mit spiegelnder Frontplatte entwickelt und sind vollständig optional sowie rückwärtskompatibel.
 ------------------
 
 *   [emeocv](https://github.com/skaringa/emeocv) \- Repository auf Github
@@ -708,6 +746,7 @@ Interessante Links
 *   [Raspberry Pi](http://elinux.org/RPi_Hub) Wiki bei eLinux.org
 *   [Raspberry Pi Foundation](http://www.raspberrypi.org/)
 *   [RRDtool](http://oss.oetiker.ch/rrdtool/) \- OpenSource Datenerfassungs- und -visualisierungstool
+*   [What is HDR?](https://android-developers.googleblog.com/2025/08/what-is-hdr.html) \- HDR-Grundlagen und technische Details
 
 Copyright © 2001-2024 Martin Kompf. All rights reserved. [Impressum](https://www.kompf.de/imprint.html) [Datenschutzerklärung](https://www.kompf.de/imprint.html)
 
